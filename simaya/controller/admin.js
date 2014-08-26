@@ -7,6 +7,7 @@ module.exports = function (app) {
     , role = require('../../sinergis/models/role.js')(app)
     , moment = require('moment')
     , df = require('node-diskfree')
+    , Node = require('../models/node.js')(app);
 
   Array.prototype.unique = function () {
     var o = {}, i, l = this.length, r = []
@@ -798,6 +799,112 @@ module.exports = function (app) {
     });
   };
 
+  var getNodes = function(req, res){
+    Node.nodes(function(err, nodes){
+      var message;
+      
+      if (err){
+        message = err.message;
+      }
+
+      for (var i = 0; i < nodes.length; i++){
+        nodes[i].isActive == nodes[i].state == "connected";
+        nodes[i].date = moment(nodes[i].date).fromNow();
+      }
+
+      Node.group(nodes, function(err, grouped){
+        
+        if (err) {
+          message = err.message;   
+        }
+
+        utils.render(req, res, 
+        "admin-nodes", 
+        {
+          message : message,
+          nodes : nodes,
+          grouped : grouped,
+          groupedBase64 : (new Buffer(JSON.stringify(grouped)).toString("base64"))
+
+        }, 
+        "base-admin-authenticated");
+      });     
+    });
+  }
+  
+  var getNodeRequests = function(req, res){
+
+    Node.requests(function(err, requests){
+
+      var message;
+      
+      if (err){
+        message = err.message;
+      }
+
+      for (var i = 0; i < requests.length; i++){
+        requests[i].isActive = requests[i].state == "connected";
+        requests[i].date = moment(requests[i].date).fromNow();
+      }
+
+      Node.group(requests, function(err, grouped){
+        
+        if (err) {
+          message = err.message;   
+        }
+
+        utils.render(req, res, 
+        "admin-node-requests", 
+        {
+          message : message,
+          requests : requests,
+          grouped : grouped,
+          request : true,
+          groupedBase64 : (new Buffer(JSON.stringify(grouped)).toString("base64"))
+
+        }, 
+        "base-admin-authenticated");
+
+      });      
+    });
+  }
+
+  var downloadCert = function(req, res){
+    var id = req.params.id;
+    Node.loadFile({ fileId: id, stream : res}, function(err) {
+      if (err){
+        // todo: handle this error
+        console.log (err);
+      }
+    });
+  }
+
+  var putNodeJSON = function(req, res){
+    var id = req.params.id;
+    var options = req.body;
+
+    if (options.action){
+      options._id = id;
+      Node[options.action](options, function(err, updated){
+        if (err){
+          return res.send(404, err);
+        }
+        res.send({ success : true, _id : id, action : options.action});
+      });
+    }
+  }
+
+  var removeNodeJSON = function(req, res){
+    var id = req.params.id;
+    var col = req.query.col || "node";
+    Node.remove({_id : id, collection : col}, function(err){ 
+      if (err) {
+        return res.send(404, err);
+      }
+      res.send({ success : true, _id : id});
+    });
+  }
+  
   return {
     newUser: newUser, 
     newUserBase: newUserBase, 
@@ -814,6 +921,11 @@ module.exports = function (app) {
     adminListInOrgJSON: adminListInOrgJSON,
     userListInOrgJSON: userListInOrgJSON,
     headInOrgJSON: headInOrgJSON,
-    removeHeadInOrg: removeHeadInOrg
+    removeHeadInOrg: removeHeadInOrg,
+    getNodes : getNodes,
+    getNodeRequests : getNodeRequests,
+    putNodeJSON : putNodeJSON,
+    removeNodeJSON : removeNodeJSON,
+    downloadCert : downloadCert
   }
 };
