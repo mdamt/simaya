@@ -7,7 +7,8 @@ module.exports = function (app) {
     , role = require('../../sinergis/models/role.js')(app)
     , moment = require('moment')
     , df = require('node-diskfree')
-    , Node = require('../models/node.js')(app);
+    , Node = require('../models/node.js')(app)
+    , Hawk = require('hawk')
 
   Array.prototype.unique = function () {
     var o = {}, i, l = this.length, r = []
@@ -800,6 +801,9 @@ module.exports = function (app) {
   };
 
   var getNodes = function(req, res){
+    
+    var simaya = app.simaya;
+
     Node.nodes(function(err, nodes){
       var message;
       
@@ -823,6 +827,7 @@ module.exports = function (app) {
         {
           message : message,
           nodes : nodes,
+          simaya : simaya,
           grouped : grouped,
           groupedBase64 : (new Buffer(JSON.stringify(grouped)).toString("base64"))
 
@@ -830,43 +835,76 @@ module.exports = function (app) {
         "base-admin-authenticated");
       });     
     });
+  
+  }
+
+  var putNodeRequests = function(req, res){
+
+    var options = req.body;
+    var file = req.files.file.path;
+    options.file = file;
+
+    Node.request(options, function(err, reply){
+      var message;
+      if (err) {
+        message = err.message;
+      }
+      res.redirect("/admin/node/requests" + (message ? ("?error=" + message) : ""));
+    });
   }
   
   var getNodeRequests = function(req, res){
 
-    Node.requests(function(err, requests){
+    function nodes(type, template){
+      Node[type](function(err, nodes){
+        var message;
+        if (err) message = err.message;
 
-      var message;
-      
-      if (err){
-        message = err.message;
-      }
-
-      for (var i = 0; i < requests.length; i++){
-        requests[i].isActive = requests[i].state == "connected";
-        requests[i].date = moment(requests[i].date).fromNow();
-      }
-
-      Node.group(requests, function(err, grouped){
-        
-        if (err) {
-          message = err.message;   
+        nodes = nodes || [];
+        for (var i = 0; i < nodes.length; i++){
+          nodes[i].isActive == nodes[i].state == "connected";
+          nodes[i].date = moment(nodes[i].requestDate || nodes[i].date).fromNow();
         }
 
-        utils.render(req, res, 
-        "admin-node-requests", 
-        {
-          message : message,
-          requests : requests,
-          grouped : grouped,
-          request : true,
-          groupedBase64 : (new Buffer(JSON.stringify(grouped)).toString("base64"))
+        if (app.simaya.installation != "local"){
+          Node.group(nodes, function(err, grouped){
+            if (err){
+              message = err.message;
+            }
 
-        }, 
-        "base-admin-authenticated");
+            utils.render(req, res, 
+            template || "admin-local-node-requests", 
+            {
+              message : message,
+              nodes : nodes,
+              grouped : grouped,
+              simaya : app.simaya,
+              groupedBase64 : (new Buffer(JSON.stringify(grouped)).toString("base64"))
+            }, 
+            "base-admin-authenticated");
 
-      });      
-    });
+            return;
+
+          });
+        } else {
+
+          utils.render(req, res, 
+          template || "admin-local-node-requests", 
+          {
+            message : message,
+            nodes : nodes,
+            simaya : app.simaya,
+          }, 
+          "base-admin-authenticated");
+
+        }
+      });
+    }
+
+    if (app.simaya.installation == "local"){
+      return nodes("localNodes");
+    }
+    return nodes("nodeRequests", "admin-node-requests");
   }
 
   var downloadCert = function(req, res){
@@ -886,6 +924,9 @@ module.exports = function (app) {
     if (options.action){
       options._id = id;
       Node[options.action](options, function(err, updated){
+        
+        console.log (err);
+
         if (err){
           return res.send(404, err);
         }
@@ -898,10 +939,69 @@ module.exports = function (app) {
     var id = req.params.id;
     var col = req.query.col || "node";
     Node.remove({_id : id, collection : col}, function(err){ 
+      console.log (err);
       if (err) {
         return res.send(404, err);
       }
       res.send({ success : true, _id : id});
+    });
+  }
+
+  /**
+   * Create a node
+   * @param  {[type]} req [description]
+   * @param  {[type]} res [description]
+   */
+  var createNode = function(req, res){
+
+    function credentialsFn(key, cb){
+      Node.getRequestKey({ key : key}, function(err, info){
+        if (err) return cb(err);
+        if (!info) return cb(new Error("not found"));
+
+        console.log (info);
+
+        var credentials = {
+          id : info.key,
+          key : info.secret,
+          algorithm: "sha256",
+          user : info.administrator
+        }
+        cb(null, credentials);
+
+      });
+    }
+
+    // authenticate the request
+    Hawk.server.authenticate(req, credentialsFn, {}, function (err, credentials, artifacts) {
+      if (err){
+        // on credentialsFn error
+        if (!err.output){
+          return res.send(404);
+        } 
+
+        // ignore timestamp validation for now, since it will be difficult to sync the client and server time
+        if (err.output.payload.message != "Stale timestamp"){
+
+          // other than stale timestamp, send the error
+          return res.send(err.output.payload.statusCode, err);
+        }
+      } 
+
+      Node.processRequest({ credentials : credentials, artifacts : artifacts, payload : req.body}, function(err){
+        if (err) res.send(401, err);
+
+        Node.fillUser({ username : credentials.user}, function(err, user){
+          if (err) res.send(401, err);
+
+          var profile = {
+            username : user.username,
+            profile : user.profile
+          }
+
+          res.send({ success : true, administrator : profile });
+        });
+      });
     });
   }
   
@@ -922,8 +1022,12 @@ module.exports = function (app) {
     userListInOrgJSON: userListInOrgJSON,
     headInOrgJSON: headInOrgJSON,
     removeHeadInOrg: removeHeadInOrg,
+    createNode : createNode,
     getNodes : getNodes,
+
     getNodeRequests : getNodeRequests,
+    putNodeRequests : putNodeRequests,
+
     putNodeJSON : putNodeJSON,
     removeNodeJSON : removeNodeJSON,
     downloadCert : downloadCert
