@@ -221,6 +221,8 @@ module.exports = function(app) {
     Node.getRequestKey({administrator : req.session.currentUser}, function(err, key){
       var message = req.query.error;
 
+      console.log (key);
+
       if (err) {
         message = err.message
       }
