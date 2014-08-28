@@ -21,8 +21,9 @@ module.exports = Utils = function() {
         user: '',
         pass: '',
       }*/
-    }
-
+    },
+    // temporary
+    installation : process.env.INSTALL || "service", // set it to local for `L` 
   }
 
   return {
