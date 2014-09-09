@@ -817,7 +817,6 @@ module.exports = function (app) {
       }
 
       Node.group(nodes, function(err, grouped){
-        
         if (err) {
           message = err.message;   
         }
@@ -830,12 +829,10 @@ module.exports = function (app) {
           simaya : simaya,
           grouped : grouped,
           groupedBase64 : (new Buffer(JSON.stringify(grouped)).toString("base64"))
-
         }, 
         "base-admin-authenticated");
       });     
     });
-  
   }
 
   var putNodeRequests = function(req, res){
@@ -917,6 +914,11 @@ module.exports = function (app) {
     });
   }
 
+  /**
+   * Update a node info
+   * @param  {[type]} req [description]
+   * @param  {[type]} res [description]
+   */
   var putNodeJSON = function(req, res){
     var id = req.params.id;
     var options = req.body;
@@ -935,6 +937,11 @@ module.exports = function (app) {
     }
   }
 
+  /**
+   * Remove a node async
+   * @param  {[type]} req [description]
+   * @param  {[type]} res [description]
+   */
   var removeNodeJSON = function(req, res){
     var id = req.params.id;
     var col = req.query.col || "node";
@@ -944,6 +951,27 @@ module.exports = function (app) {
         return res.send(404, err);
       }
       res.send({ success : true, _id : id});
+    });
+  }
+
+  /**
+   * Download a node's public certificate
+   * @param  {[type]} req [description]
+   * @param  {[type]} res [description]
+   */
+  var getNodeCert = function (req, res){
+    var id = req.params.id;
+    Node.nodes({_id : id}, function(err, node){
+      if(err){
+        return res.send(404, err);
+      }
+      var payload = node.publicCert;
+      var filename = node.name + "_" + node.administrator;
+      filename = filename.toLowerCase();
+      filename = filename.split(".").join("_");
+      filename = filename.split(" ").join("_");
+      res.header("Content-Disposition", "attachment; filename='" + filename + ".pub'");
+      res.send(payload);
     });
   }
 
@@ -1024,6 +1052,7 @@ module.exports = function (app) {
     removeHeadInOrg: removeHeadInOrg,
     createNode : createNode,
     getNodes : getNodes,
+    getNodeCert : getNodeCert,
 
     getNodeRequests : getNodeRequests,
     putNodeRequests : putNodeRequests,
