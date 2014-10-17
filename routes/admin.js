@@ -47,4 +47,14 @@ module.exports = function(app) {
   app.get('/admin/phones/:id', admin.phones);
   app.post('/admin/phones/:id', admin.phones);
   app.all('/admin/announcement', utils.requireLogin, announcement.showAndUpdate);
+
+  app.post('/l/nodes', adminSimaya.createNode);
+
+  // simaya-l local admin
+  app.get('/admin/nodes', utils.requireLogin, adminSimaya.getNodes);
+  app.post('/admin/nodes/:id', utils.requireLogin, adminSimaya.putNodeJSON);
+  app.get('/admin/nodes/:id/cert', utils.requireLogin, adminSimaya.getNodeCert);
+  app.del('/admin/nodes/:id', utils.requireLogin, adminSimaya.removeNodeJSON);
+  app.get('/admin/node/requests', utils.requireLogin, adminSimaya.getNodeRequests);
+  app.post('/admin/node/requests', utils.requireLogin, adminSimaya.putNodeRequests);
 }
