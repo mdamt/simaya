@@ -21,7 +21,7 @@ module.exports = function(app) {
     async.waterfall([
       // 1. validate username
       function(callback){
-        validator.validateRegex({ username : [/^[a-zA-Z0-9-._]{3,100}$/, 'invalid']})
+        validator.validateRegex({ username : [/^[a-zA-Z0-9-:._]{3,100}$/, 'invalid']})
 
         if(!validator.hasErrors()){
           // 1.1 check if username already exists
@@ -189,6 +189,9 @@ module.exports = function(app) {
         data.active = false
         data._id = collection.pkFactory.createPk();
 
+        if (app.simaya.installationId) {
+          data.username = "u" + app.simaya.installationId + ":" + data.username;
+        }
         db.validateAndInsert(data, function (error, validator) {
           callback(validator);
         }); 
@@ -313,6 +316,9 @@ module.exports = function(app) {
     // Returns a callback:
     //    result: true if user is authenticated
     authenticate: function(user, password, callback) {
+      if (user != "admin" && app.simaya.installationId && user.indexOf("u" + app.simaya.installationId + ":") == -1) {
+        user = "u" + app.simaya.installationId + ":" + user;
+      }
       db.findOne({username: user}, function(error, item) {
         var result = false;
         if (error == null && item != null) {
