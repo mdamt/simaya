@@ -22,7 +22,7 @@ module.exports = Utils = function() {
         pass: '',
       }*/
     },
-    installationId: process.env.INSTALL_ID || "0",
+    installationId: process.env.INSTALL_ID || "",
     installation : process.env.INSTALL || "service", // set it to local for `L` 
   }
 
