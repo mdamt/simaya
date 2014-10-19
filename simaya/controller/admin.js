@@ -871,6 +871,7 @@ module.exports = function (app) {
             utils.render(req, res, 
             template || "admin-local-node-requests", 
             {
+              installationId : app.simaya.installationId,
               message : message,
               nodes : nodes,
               grouped : grouped,
@@ -887,6 +888,7 @@ module.exports = function (app) {
           utils.render(req, res, 
           template || "admin-local-node-requests", 
           {
+            installationId : app.simaya.installationId,
             message : message,
             nodes : nodes,
             simaya : app.simaya,
@@ -1016,7 +1018,10 @@ module.exports = function (app) {
       } 
 
       Node.processRequest({ credentials : credentials, artifacts : artifacts, payload : req.body}, function(err){
-        if (err) res.send(401, err);
+        if (err) {
+          console.log(err);
+          res.send(401, err);
+        }
 
         Node.fillUser({ username : credentials.user}, function(err, user){
           if (err) res.send(401, err);
