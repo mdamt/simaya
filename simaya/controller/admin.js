@@ -1036,6 +1036,21 @@ module.exports = function (app) {
       });
     });
   }
+
+  var checkLocalNode = function(req, res) {
+    var self = this;
+
+    var installationId = req.params.id;
+
+    var options = {
+      installationId: installationId,
+    }
+
+    Node.localCheckNode(options, function(err, result) {
+      if (err) return res.send(500, err.message);
+      res.send(result);
+    });
+  }
   
   return {
     newUser: newUser, 
@@ -1064,6 +1079,8 @@ module.exports = function (app) {
 
     putNodeJSON : putNodeJSON,
     removeNodeJSON : removeNodeJSON,
-    downloadCert : downloadCert
+    downloadCert : downloadCert,
+
+    checkLocalNode: checkLocalNode
   }
 };
