@@ -1060,6 +1060,7 @@ module.exports = function (app) {
 
     var options = {
       installationId: installationId,
+      local: true
     }
 
     Node.checkSync(options, function(err, result) {
