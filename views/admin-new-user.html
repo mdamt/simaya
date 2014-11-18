@@ -144,7 +144,7 @@
           <div class="control-group" id="class">
             <label class="control-label" for="profile[class]">Golongan</label>
             <div class="controls">
-              <select name="profile[class]" class="span6">
+              <select id="class-input" name="profile[class]" class="span6">
                 <option value="1a" {{#1a}}selected{{/1a}}>I/a (Juru Muda)</option>
                 <option value="1b" {{#1b}}selected{{/1b}}>I/b (Juru Muda Tingkat 1)</option>
                 <option value="1c" {{#1c}}selected{{/1c}}>I/c (Juru)</option>
@@ -505,11 +505,18 @@ $(document).ready(function() {
     $('#nip-control').slideUp(function(){                     
         $('#nip-input').val('Jabatan politik tanpa NIP');
     });
+    $('#class').slideUp(function(){                
+        $('#class-input').val('0');
+    });
   }
   function nonjabpol(){ 
     $('#nip-input').val('', function(){
         $('#nip-control').slideDown();
     });
+    $('#class-input').val('',function(){            
+        $('#class').slideDown();
+    });
+
 
     }
 $(document).ready(function(){
