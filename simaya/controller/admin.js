@@ -24,7 +24,7 @@ module.exports = function (app) {
 
     profile.emailList = profile.emailList || []
     profile.emailList = (typeof profile.emailList == 'string') ? [profile.emailList] : profile.emailList.unique()
-      
+
     var data = {
         username: req.body.username,
         password: req.body.password,
@@ -37,7 +37,7 @@ module.exports = function (app) {
     }
 
     if (req.body.active) {
-      data.active = true; 
+      data.active = true;
     }
 
     user.create(
@@ -183,7 +183,7 @@ module.exports = function (app) {
         vals.profile = req.body.profile;
 
         if (parseInt(req.body.profile.echelon) != 0) {
-          if (isLocalAdmin && req.body.profile.nip.length != 18) {
+          if (isLocalAdmin && req.body.profile.nip.length != 18 && req.body.profile.nip != "Jabatan politik tanpa NIP") {
             vals.unsuccessful = true;
             vals.form = true;
             vals.messages = vals.messages || []
@@ -194,7 +194,7 @@ module.exports = function (app) {
 
         user.list({ search: {'profile.nip': req.body.profile.nip}}, function (r) {
           if (isLocalAdmin && r[0] != null && parseInt(req.body.profile.echelon) != 0) {
-            if (r[0].profile.nip == req.body.profile.nip && r[0].username != req.body.username) {
+            if (r[0].profile.nip == req.body.profile.nip && r[0].username != req.body.username && req.body.profile.nip != "Jabatan politik tanpa NIP") {
               vals.unsuccessful = true;
               vals.existNip = true;
               vals.form = true;
@@ -774,7 +774,7 @@ module.exports = function (app) {
   var removeHeadInOrg = function (req, res) {
     org.edit(req.body.path, {
       path: req.body.path,
-      removeHead: true 
+      removeHead: true
     }, function(v) {
       if (v.hasErrors()) {
         res.send({status: "error", error: v.errors})
@@ -798,18 +798,18 @@ module.exports = function (app) {
   };
 
   return {
-    newUser: newUser, 
-    newUserBase: newUserBase, 
-    editUser: editUser, 
-    editUserBase: editUserBase, 
-    removeUsers: removeUsers, 
-    user: userList, 
-    userBase: userListBase, 
-    userListJSON: userListJSON, 
-    admin: adminList, 
-    adminBase: adminListBase, 
-    diskStatus: diskStatus, 
-    adminStructure: adminStructure, 
+    newUser: newUser,
+    newUserBase: newUserBase,
+    editUser: editUser,
+    editUserBase: editUserBase,
+    removeUsers: removeUsers,
+    user: userList,
+    userBase: userListBase,
+    userListJSON: userListJSON,
+    admin: adminList,
+    adminBase: adminListBase,
+    diskStatus: diskStatus,
+    adminStructure: adminStructure,
     adminListInOrgJSON: adminListInOrgJSON,
     userListInOrgJSON: userListInOrgJSON,
     headInOrgJSON: headInOrgJSON,
