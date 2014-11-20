@@ -6,6 +6,7 @@ uploads/
 sinergis-fork
 *-backup
 doc
+npm-debug.log
 
 #ignore webstorm project directory
 .idea
