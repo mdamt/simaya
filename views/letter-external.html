@@ -58,7 +58,7 @@
         <label class="control-label" for="receivedDate">Tanggal Penerimaan</label>
         <div class="controls">
           <input class="span3" type="text" name="receivedDate">
-          <span class="add-on"><i class="icon-calendar calendar-picker" data-field="receivedDate"></i></span>
+          <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="receivedDate"></i></span>
         </div>
       </div>
 
@@ -66,7 +66,7 @@
         <label class="control-label" for="letter[date]">Tanggal Surat</label>
         <div class="controls">
           <input class="span3" type="text" name="date">
-          <span class="add-on"><i class="icon-calendar calendar-picker" data-field="date"></i></span>
+          <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="date"></i></span>
         </div>
       </div>
 
@@ -93,7 +93,12 @@
         <label class="control-label" for="incomingAgenda">Nomor Agenda</label>
         <div class="controls">
           <input class="span4" type="text" name="incomingAgenda" value="{{letter.incomingAgenda}}" {{^isAdministration}}disabled{{/isAdministration}}>
+
+          {{#lastAgenda}}
+          <br> Nomor agenda keluar terakhir: {{lastAgenda}}
+          {{/lastAgenda}}
         </div>
+
       </div>
 
       <div class="control-group">
@@ -107,7 +112,7 @@
               <span>Berkas</span>
               <input type="file" name="files[]" multiple>
             </span>
-            <em>&nbsp; Dokumen maksimal berukuran 10 mb</em>
+            <em>&nbsp; Maksimal berukuran 10 mb dengan format .pdf, .jpg dan .png</em>
           </div>
         </div>
       </div>

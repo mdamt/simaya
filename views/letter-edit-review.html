@@ -96,6 +96,9 @@
       <input type="hidden" name="operation" value="review-outgoing">
       {{/readyToSend}}
       {{#readyToSend}}
+              <script>
+                var letterLinks = [];
+              </script>
       <input type="hidden" name="operation" value="send-outgoing">
       <div class="control-group">
         <label class="control-label">Atas nama</label>
@@ -175,7 +178,6 @@
       <div class="control-group" id="file-selection">
         <label class="control-label" for="recipients">Berkas Pemindaian</label>
         <div class="controls">
-          <!--button class="btn btn-mini" id="tambah-berkas">Tambah berkas sebagai lampiran</button-->
           <div class="span6" id="fileAttachments-list">
             <div id="letter-fileAttachments-placeholder" class="files"></div>
             <span id="fileupload" style="display: none;" class="btn btn-mini btn-info fileinput-button">
@@ -183,7 +185,7 @@
               <span>Berkas</span>
               <input type="file" name="files[]" multiple>
             </span>
-            <em>&nbsp; Dokumen maksimal berukuran 10 mb</em>
+            <em>&nbsp; Maksimal berukuran 10 mb dengan format .pdf, .jpg dan .png</em>
           </div>
         </div>
       </div>
@@ -197,6 +199,15 @@
 
       <div class="control-group" ng-app="ngWebODF">
         <label class="control-label" for="template">Isi surat</label>
+		<div class="controls">
+			<img src="/img/arrow-path.png" style="margin-top:10px;position:absolute;-moz-transform: scale(-1, 1);-webkit-transform: scale(-1, 1);-o-transform: scale(-1, 1);-ms-transform: scale(-1, 1);transform: scale(-1, 1);">
+				<h6 href="#" class="lighter blue">
+					<span class="lighter blue" style="margin-left:40px">Penyunting WebODF ini hanya dapat mengunggah berkas .odt</span>
+					<i class="ace-icon fa fa-hand-o-right bigger-125"></i>
+					<a class="label label-info" role="button" data-toggle="modal" data-target="#odt">Lebih lanjut ...</a>
+				</h6>
+		</div>
+		<br>        
         <div class="controls">
           <webodf style="width:100px" url="/letter/content/{{letter._id}}" name="odf" data-ruler="yes"></webodf>
         </div>
@@ -255,6 +266,7 @@
                 <span>Berkas</span>
                 <input type="file" name="files[]" multiple>
               </span>
+              <em>&nbsp; Maksimal berukuran 10 mb dengan format .pdf, .jpg dan .png</em>
             </div>
           </div>
         </div>
@@ -274,7 +286,7 @@
             <div class="span6" id="recipient-list" data-data="letter-recipients" data-placeholder="letter-recipient-placeholder">
               <input type="hidden" id="letter-recipients" name="recipients" value="{{letter.recipients}}">
               <div id="letter-recipient-placeholder"><span class="label label-important data-empty"></span><span class="data-value"></span></div>
-              <div href="#" data-placeholder="letter-recipient-placeholder" data-control="letter-recipients" data-type="letter" data-letter-id="{{letterId}}" class="name-chooser" data-label-choose="Pilih" data-label-cancel="Batal" data-enable-multiple="true" data-label="Ambil dari pangkalan data" data-class="btn btn-mini" data-label-loading="Memuat data..." data-enable-manual="true" data-add-manual-label="Tambahkan data manual"></div>
+              <div href="#" data-placeholder="letter-recipient-placeholder" data-control="letter-recipients" data-type="letter" data-letter-id="{{letterId}}" class="name-chooser" data-label-choose="Pilih" data-label-cancel="Batal" data-enable-multiple-in-a-selection="true" data-label="Ambil dari pangkalan data" data-class="btn btn-mini" data-label-loading="Memuat data..." data-enable-manual="true" data-add-manual-label="Tambahkan data manual"></div>
             </div>
           </div>
         </div>
@@ -312,6 +324,42 @@
         </div>
 
         <div class="control-group">
+            <label class="control-label" for="title">Kaitkan Surat</label>
+
+            <div class="controls">
+
+              <script>
+                var letterLinks = [];
+{{#links}}
+                letterLinks.push({
+                  _id: "{{_id}}",
+                  title: "{{title}}"
+                });
+{{/links}}
+              </script>
+
+                <div class="link-letter" 
+                     data-initial-data=""
+                     data-button-class="btn btn-info btn-small"
+                     data-title="Kaitkan surat"
+                     data-loading-label="Memuat data..."
+                     data-dismiss-label="Batal"
+                     data-accept-label="Pilih"
+                     data-button-search-label="Cari"
+                     data-button-outgoing-agenda-label="Agenda Keluar"
+                     data-button-incoming-agenda-label="Agenda Masuk"
+                     data-button-dismiss-letter-label="[hapus]"
+                     data-table-date-label="Tanggal"
+                     data-table-letter-number-label="Nomor Surat"
+                     data-table-agenda-label="Nomor Agenda"
+                     data-table-sender-label="Atas Nama"
+                     data-table-title-label="Perihal"
+                     data-button-label="Cari surat untuk dikaitkan..."></div>
+            </div>
+        </div>
+
+
+        <div class="control-group">
           <label class="control-label" for="priority">Kecepatan Sampai</label>
           <div class="controls">
             <select name="priority">
@@ -334,7 +382,7 @@
         </div>
 
       </div>
-      <div class="step-pane " id="step3">
+      <div class="step-pane  " id="step3">
         <hr/>
         <div class="control-group">
           <label class="control-label" for="type">Jenis Naskah Dinas</label>
@@ -391,7 +439,7 @@
         </div>
 
       </div>
-      <div class="step-pane " id="step4">
+      <div class="step-pane" id="step4">
         <hr/>
         <h4 style="margin-top:50px" class="lighter underline">Alur Pemeriksaan</h4>
         <div class="control-group">
@@ -401,9 +449,19 @@
             <div id="reviewers-loading" class="">
               <span class="fa fa-spin fa-spinner"></span> Memuat daftar pemeriksa...
             </div>
-            <ul class="wizard-steps" id="reviewers-list" data-originator="{{letter.originator}}" data-current="{{letter.currentReviewer}}" data-date="{{letter.creationDate}}">
-              <li class="template hidden"><span class="step"></span><span class="title"></span></li>
-            </ul>
+            <div class="timeline control line dialogs" id="reviewers-list" data-originator="{{letter.originator}}" data-current="{{letter.currentReviewer}}" data-date="{{letter.creationDate}}">
+              <div class="itemdiv dialogdiv reviewer-item template hidden">
+                <div class="user">
+                  <span class="user contact-avatar timeline comment me " data-username="{{username}}"></span>
+                </div>
+                <div class="body">
+                  <div class="step"> </div>
+                  <div class="name">
+                    <span class="title resolve-name"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         {{#letter.log.length}} 
@@ -550,6 +608,16 @@ $(function(){
           angular.element("[name=odf]").scope().updateGeometry();
       }).on('finished', function(e) {
         var form = $('#outgoingLetter');
+
+        var linkLetter = $(".link-letter").linkLetter();
+        var selections = linkLetter.selections;
+        if (selections && typeof(selections) === "object") {
+          form.find("input[name=linked-letters]").remove();
+          var letterIds = Object.keys(selections); 
+          var hidden = $("<input>").attr("name","linked-letters").attr("type", "hidden").val(letterIds.join(","));
+          form.append(hidden);
+        }
+
 
         bootbox.dialog({
 title:"Konfirmasi",
@@ -709,13 +777,33 @@ ignoreFiles.change(function() {
   </div>
 </div>
 
+<div class="modal hide fade audit-detail" id="odt" role="dialog">
+  <div class="modal-header">
+    <a class="close" data-dismiss="modal">×</a>
+    <h3>Kenapa menggunakan .odt?</h3>
+  </div>
+  <div class="modal-body">
+	<p>1. Surat Edaran Menteri Komunikasi dan Informatika nomor 05/SE/M.KOMINFO/10/2005 tentang Pemakaian dan Pemanfataan Penggunaan Piranti Lunak Legal di Lingkungan Instansi Pemerintah</p>
+	<p>2. Surat Edaran Menteri Pendayagunaan Aparatur Negara nomor SE/01/M.PAN/3/2009 tentang Pemanfaatan Perangkat Lunak Legal dan <em>Open Source Software (OSS)</em></p>
+	<p>3. Peraturan Menteri Komunikasi dan Informatika nomor 7 tahun 2013 tentang Pedoman Penerapan Interoperabilitas Dokumen Perkantoran Bagi Penyelenggara Sistem Elektronik untuk Pelayanan Publik</p>
+	<p>Untuk penggunaan dikomputer lokal, dapat menggunakan <a href="http://www.libreoffice.org/download/">LibreOffice</a></p>
+  </div>
+  <div class="modal-footer">
+    <a href="#" class="btn" data-dismiss="modal">Tutup</a>
+  </div>
+</div>
+
 <script src="/lib/tree.jquery.js"></script>
 <script type="text/javascript" src="/js/people-tree.js"></script>
 <link href="/css/document-viewer.css" rel="stylesheet">
 <script src="/js/document-viewer.js" type="text/javascript"></script>
 <script src='/js/name-chooser.js'></script>
+<script type="text/javascript" src="/js/pagination.js"></script>
+<script type="text/javascript" src="/js/link-letter.js"></script>
 <script>
   $(document).ready(function() {
+    letterLinks = letterLinks || [];
     $(".name-chooser").nameChooser();
+    $(".link-letter").linkLetter(letterLinks);
   });
 </script>

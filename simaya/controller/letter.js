@@ -389,14 +389,24 @@ Letter = module.exports = function(app) {
           vals.autoCc = fakeVals.autoCc;
         }
 
-        letter.createLetter(data, function(err, result) {
-          if (err) {
-            vals.error = err;
-          } else {
-            vals.draftId = result[0]._id;
-          }
-          utils.render(req, res, "letter-external", vals, "base-authenticated");
-        });
+        if (req.body) {
+          letter.createLetter(data, function(err, result) {
+            if (err) {
+              vals.error = err;
+            } else {
+              vals.draftId = result[0]._id;
+            }
+            letter.lastAgenda(myOrganization, 0, function(err, data) {
+              if (data) vals.lastAgenda = data;
+              utils.render(req, res, "letter-external", vals, "base-authenticated");
+            });
+          });
+        } else {
+          letter.lastAgenda(myOrganization, 0, function(err, data) {
+            if (data) vals.lastAgenda = data;
+            utils.render(req, res, "letter-external", vals, "base-authenticated");
+          });
+        }
       });
     });
   }
@@ -1115,7 +1125,17 @@ Letter = module.exports = function(app) {
     var vals = {};
 
     if (req.params.id) {
-      letter.downloadAttachment(req.params.id, res);
+      letter.downloadAttachment({
+        protocol: req.protocol,
+        host: req.host,
+        username: req.session.currentUser,
+        id: req.params.id,
+        stream: res
+      }, function() {
+        res.end();
+      });
+    } else {
+      res.send(500);
     }
   }
 
@@ -1430,24 +1450,32 @@ Letter = module.exports = function(app) {
     vals.breadcrumb = breadcrumb;
 
     var search = buildSearchForOutgoing(req, res);
-    console.log(JSON.stringify(search));
     list(vals, "letter-outgoing", search, req, res, embed);
   }
 
   var listLetter = function(vals, req, res) {
     var me = req.session.currentUser;
+    var myOrganization = req.session.currentUserProfile.organization;
     var options = {};
+    if (req.query && req.query.search) {
+      options.search = req.query.search;
+    }
 
     var functions = {
       "letter-outgoing-draft": "listDraftLetter",
       "letter-incoming": "listIncomingLetter",
-      "agenda-incoming": "listIncomingLetter"
+      "agenda-incoming": "listIncomingLetter",
+      "agenda-outgoing": "listOutgoingLetter"
     }
 
     var f = functions[vals.action];
     if (f) {
       if (vals.action == "agenda-incoming") {
         options.agenda = true;
+        options.myOrganization = myOrganization;
+      }
+      if (vals.action == "letter-incoming") {
+        options.myOrganization = myOrganization;
       }
       options.page = parseInt(req.query.page) || 1;
       var sortOptions = req.query.sort || {};
@@ -1457,7 +1485,6 @@ Letter = module.exports = function(app) {
       }
       letter[f](me, options, function(err, result) {
         console.log(err);
-        console.log(result);
         if (result) {
           vals.letters = result.data;
           vals.total = result.total;
@@ -1945,6 +1972,7 @@ Letter = module.exports = function(app) {
   var listOutgoingAgenda = function(req, res) {
     var vals = {
       title: "Agenda Surat Keluar",
+      action: "agenda-outgoing",
       currentUser: req.session.currentUser
     };
     if (utils.currentUserHasRoles([app.simaya.administrationRole], req, res)) {
@@ -1964,7 +1992,7 @@ Letter = module.exports = function(app) {
       ],
       outgoingAgenda: { $ne: null }
     }
-    list(vals, "agenda-outgoing", { search: search }, req, res);
+    listLetter(vals, req, res);
   }
 
   var preview = function(req, res) {
@@ -2228,9 +2256,9 @@ Letter = module.exports = function(app) {
     data = req.params[0].split("/");
     if (data.length > 0 && data[0] && data[1]) {
       if (content) {
-        letter.renderContentPage(data[0], me, index, data[1], res);
+        letter.renderContentPage(data[0], me, index, parseInt(data[1]), res);
       } else {
-        letter.renderDocumentPage(data[0], data[1], res);
+        letter.renderDocumentPage(data[0], parseInt(data[1]), res);
       }
     } else {
       res.send(JSON.stringify({result: "ERROR"}));
@@ -2288,7 +2316,15 @@ Letter = module.exports = function(app) {
 
     if (id) {
       var me = req.session.currentUser;
-      letter.contentPdf(id, me, index, ignoreCache, res, function(err) {
+      letter.contentPdf({
+        protocol: req.protocol,
+        host: req.host,
+        id: id, 
+        username: me, 
+        index: index, 
+        ignoreCache: ignoreCache, 
+        stream: res
+      }, function(err) {
         if(err) {
           return res.send(500, err);
         }
@@ -2460,11 +2496,25 @@ Letter = module.exports = function(app) {
       data.additionalReviewers = data["additional-reviewers"].split(",");
       delete(data["additional-reviewers"]);
     }
+    var linkedLetters = [];
+    if (data["linked-letters"]) {
+      linkedLetters = data["linked-letters"].split(","); 
+    }
     letter.editLetter({_id: ObjectID(data._id)}, data, function(err, result) {
-      if (err) {
-        res.send(500, result);
+      var done = function(err, result) {
+        if (err) {
+          console.log(err)
+          res.send(500, result);
+        } else {
+          res.send(result);
+        }
+      }
+      if (linkedLetters.length > 0) {
+        letter.link(req.session.currentUser, data._id, linkedLetters, function(err) {
+          done(err, result);
+        });
       } else {
-        res.send(result);
+        done(err, result);
       }
     });
   }

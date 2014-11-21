@@ -30,20 +30,21 @@ Disposition = module.exports = function(app) {
   
   var create = function(req, res) {
     var vals = {
-      title: 'Create Disposition',  
+      title: 'Buat Disposisi',  
     }
 
     var breadcrumb = [
-      {text: 'Disposition', link: '/dispositions'},
+      {text: 'Disposisi', link: '/dispositions'},
       {text: 'Buat Baru', isActive: true}
     ];
     vals.breadcrumb = breadcrumb;
+    var me = req.session.currentUser;
     var myOrganization = req.session.currentUserProfile.organization;
 
     if (req.params.id !== null) {
       if (typeof(req.body.disposition) !== "undefined") {
         var recipients = [];
-        if (typeof(req.body.disposition.recipient) === "string") {
+        if (typeof(req.body.disposition.recipient) === "string" && req.body.disposition.recipient.indexOf(",") < 0) {
           var r = {
             message: req.body.disposition.message,
             recipient: req.body.disposition.recipient,
@@ -54,14 +55,18 @@ Disposition = module.exports = function(app) {
           }
           recipients.push(r);
         } else {
-          for (var i = 0; i < req.body.disposition.recipient.length; i++) {
+          var postedRecipients = req.body.disposition.recipient;
+          if (typeof(req.body.disposition.recipient) === "string" && req.body.disposition.recipient.indexOf(",") > 0) {
+            postedRecipients = req.body.disposition.recipient.split(",");
+          }
+          for (var i = 0; i < postedRecipients.length; i++) {
             var r = {
-              message: req.body.disposition.message[i],
-              recipient: req.body.disposition.recipient[i],
-              date: req.body.disposition.date[i] || new Date(),
-              instruction: req.body.disposition.instruction[i],
-              security: req.body.disposition.security[i],
-              priority: req.body.disposition.priority[i],
+              message: req.body.disposition.message,
+              recipient: postedRecipients[i],
+              date: req.body.disposition.date || new Date(),
+              instruction: req.body.disposition.instruction,
+              security: req.body.disposition.security,
+              priority: req.body.disposition.priority,
             }
             if (r.recipient) {
               recipients.push(r);
@@ -81,6 +86,19 @@ Disposition = module.exports = function(app) {
           recipients: recipients,
         }
         
+        var shareDisposition = function(id, cb) {
+          var superiors = req.body["cc-superiors"];
+          if (superiors && _.isString(superiors)) {
+            superiors = [ superiors ];
+          }
+          if (superiors && superiors.length > 0) { 
+            var message = "Disposisi untuk bawahan Anda"; 
+            disposition.share(id, me, superiors, message, cb);
+          } else {
+            cb(null);
+          }
+        }
+
         disposition.create(data, function(e, v) {
           if (v.hasErrors() == false) {
             vals.successful = true;
@@ -112,7 +130,10 @@ Disposition = module.exports = function(app) {
                     }
 
                     letter.edit(req.params.id, data, function() {
-                      utils.render(req, res, 'disposition-create', vals, 'base-authenticated');
+                      shareDisposition(v._id, function(err) {
+                        console.log(err);
+                        utils.render(req, res, 'disposition-create', vals, 'base-authenticated');
+                      });
                     });
                   } else {
                     utils.render(req, res, 'disposition-create', vals, 'base-authenticated');
@@ -210,6 +231,25 @@ Disposition = module.exports = function(app) {
     }
   }
   
+  var downloadAttachment = function(req, res) {
+    var vals = {};
+
+    if (req.params.id) {
+      disposition.downloadAttachment({
+        protocol: req.protocol,
+        host: req.host,
+        username: req.session.currentUser,
+        id: req.params.id,
+        stream: res
+      }, function() {
+        res.end();
+      });
+    } else {
+      res.send(500);
+    }
+  }
+
+
   var view = function(req, res) {
     var vals = {
       username: req.session.currentUser,
@@ -516,6 +556,57 @@ Disposition = module.exports = function(app) {
     return listOutgoingBase(req, res);
   }
 
+  var listCc = function(req, res) {
+    var vals = {};
+
+    var breadcrumb = [
+      {text: 'Disposisi Tembusan', link: '/dispositions/cc'},
+    ];
+    vals.breadcrumb = breadcrumb;
+  
+    session.getUser(req.session.authId, function(username) {
+      var search = {
+        search: {
+          'sharedRecipients.recipient': { 
+            $in: [ username ]
+          }
+        }
+      }
+      
+      if (req.query.search && req.query.search.string) {
+        search.search["$or"] = populateSearch(req.query.search.string);
+      }
+      disposition.list(search, function(result) {
+        search.limit = 10;
+          
+        var page = req.query.page || 1;
+        var length = 0;
+        if (result && result.length) length = result.length;
+        var pages = cUtils.getPages(page, 10, length);
+        vals.dispPages = pages;
+        
+        search.page = page;
+        disposition.list(search, function(r) {
+          if (r) {
+            r.forEach(function(e, i) {
+              var d = moment(e.date);
+              if (d) {
+                r[i].formattedDate = d.format('DD/MM/YYYY');
+              }
+              for (var j = 0; j < r[i].recipients.length; j++) {
+                r[i].recipients[j]['priority' + r[i].recipients[j].priority] = true;
+                r[i].recipients[j]['security' + r[i].recipients[j].security] = true;
+              }
+            });
+          }
+          vals.dispositions = r;
+          utils.render(req, res, 'disposition-list-cc', vals, 'base-authenticated');
+        });
+      });
+    });
+  }
+
+
   var listOutgoingBase = function(req, res, x, embed) {
     var vals = {};
 
@@ -703,7 +794,7 @@ Disposition = module.exports = function(app) {
       }
       disposition.list(search, function(result) { 
         if (result != null && result.length == 1) {
-          disposition.addComments(ObjectID(req.body.dispositionId), req.session.currentUser, req.body.message, function(id) {
+          disposition.addComments(ObjectID(req.body.dispositionId), req.session.currentUser, req.body.message, req.body.attachments, function(id) {
             if (id) {
               var message = req.session.currentUserProfile.fullName + ' mengomentari disposisi Anda.'
               sendNotificationComments(req.session.currentUser, result[0].recipients, 0, message, "/disposition/read/" + req.body.dispositionId + "#comments-" + id, function() {
@@ -763,12 +854,107 @@ Disposition = module.exports = function(app) {
     });
   }
  
+  var findSuperiors = function(req, res) {
+    var people = req.query.people;
+    var me = req.session.currentUser;
+
+    if (_.isString(people) && people.indexOf(",") > 0) {
+      people = people.split(",");
+    } else if (_.isString(people) && people.length > 0) {
+      people = [ people ];
+    } else {
+      return res.send(400);
+    }
+    var user = app.db("user");
+    var org = app.db("organization");
+
+    // Get all heads from the specified orgs
+    // except myself
+    var findHeads = function(orgs, cb) {
+      org.findArray({path: {$in: orgs}}, function(err, result) {
+        if (err) return cb(err);
+        var heads = [];
+        _.each(result, function(item) {
+          if (item.head && item.head != me) heads.push(item.head);
+        });
+        cb(null, heads);
+      });
+    }
+
+    // Get all people's information
+    var findPeople = function(people, cb) {
+      user.findArray({username: { $in: people }}, { username:1, profile: 1}, function(err, result) {
+        if (err) return cb(err);
+        cb(null, result);
+      });
+    };
+
+    // Get the subordinates' info
+    findPeople(people, function(err, subordinates) {
+      if (err) return res.send(500, err.message);
+      var orgs = [];
+      _.each(subordinates, function(item) {
+        if (item && item.profile.organization) {
+          orgs.push(item.profile.organization);
+        }
+      });
+      // get the heads
+      findHeads(orgs, function(err, foundHeads) {
+        if (err) return res.send(500, err.message);
+        var removedHeads = _.intersection(people, foundHeads);
+        var heads = _.difference(foundHeads, removedHeads);
+        // get the heads' info
+        findPeople(heads, function(err, result) {
+          if (err) return res.send(500, err.message);
+          return res.send(result);
+        });
+      });
+    });
+  }
+
+  var uploadAttachment = function(req, res){
+    var id = req.body._id;
+
+    var files = req.files.files;
+
+    if (files && files.length > 0) {
+
+      var file = files[0];
+      var metadata = {
+        path : file.path,
+        name : file.name,
+        type : file.type
+      };
+
+      // uploads file to gridstore
+      disposition.saveAttachmentFile(metadata, function(err, result) {
+        var file = {
+          path : result.fileId,
+          name : metadata.name,
+          type : metadata.type
+        };
+
+        if (err) return res.send(500);
+        // wraps the file
+        var bundles = { files : []}
+        bundles.files.push(file)
+
+        res.send(bundles);
+      })
+    } else {
+      if (err) return res.send(400);
+    }
+  }
+
+
+
   return {
     create: create
     , view: view
     , list: list
     , listBase: listBase
     , listOutgoing: listOutgoing
+    , listCc: listCc
     , listOutgoingBase: listOutgoingBase
     , index: index
     , getRecipientCandidates: getRecipient
@@ -778,6 +964,9 @@ Disposition = module.exports = function(app) {
     , populateSearch: populateSearch
     , isReDispositioned: isReDispositioned
     , share: share
+    , findSuperiors: findSuperiors
+    , uploadAttachment: uploadAttachment
+    , downloadAttachment: downloadAttachment
   }
 };
 }

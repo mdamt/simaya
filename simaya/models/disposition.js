@@ -5,7 +5,9 @@ module.exports = function(app) {
   var user = app.db('user');
   var organization = app.db('organization');
   var utils = require('./utils')(app)
-    , moment = require('moment')
+    , moment = require('moment');
+  var ObjectID = app.ObjectID;
+  var fs = require("fs");
   
   var notification = require("./notification.js")(app);
 
@@ -40,6 +42,45 @@ module.exports = function(app) {
     }
   }
 
+  var saveAttachmentFile = function(file, callback) {
+    var fileId = new ObjectID();
+    var store = app.store(fileId, file.name, "w", file.options || {});
+    store.open(function(error, gridStore){
+      gridStore.writeFile(file.path, function(error, result){
+        fs.unlinkSync(file.path);
+        callback(error, result);
+      });
+    }); 
+  }
+
+  var downloadAttachment = function(options, callback) {
+    var fileId = options.id;
+    var stream = options.stream;
+    // Find letter title for this file
+    var store = app.store(app.ObjectID(fileId+""), "", "r");
+    store.open(function(error, gridStore) {
+      console.log(error);
+      if (stream.attachment) {
+        stream.contentType(gridStore.contentType);
+        stream.attachment(gridStore.filename);
+      }
+      // Grab the read stream
+      if (!gridStore || error) { 
+        if (callback) {
+          return callback(error);
+        } 
+        return;
+      }
+      var gridStream = gridStore.stream(true);
+      gridStream.on("error", function(error) {
+        if (callback) return callback(error);
+      });
+      gridStream.on("end", function() {
+        if (callback) callback(null);
+      });
+      gridStream.pipe(stream);
+    });
+  };
 
   var sendNotification = function(sender, type, data, cb) {      
     var send = function(sender, recipient, text, url) {
@@ -156,7 +197,7 @@ module.exports = function(app) {
         
           db.find(search.search, fields, function(error, cursor) {
             cursor.sort({date:-1}).limit(limit).skip(offset).toArray(function (error, result) {
-              if (result.length == 1) {
+              if (result && result.length == 1) {
                 utils.resolveUsers([result[0].recipient], function(data) {
                   result[0].recipientsResolved = data[0];
                   utils.resolveUsers([result[0].sender], function(data) {
@@ -173,7 +214,7 @@ module.exports = function(app) {
           db.find(search.search, fields, function(error, cursor) {
             if (cursor != null) {
               cursor.sort({date:-1}).toArray(function(error, result) {
-                if (result.length == 1) {
+                if (result && result.length == 1) {
                     utils.resolveUsers([result[0].recipient], function(data) {
                       result[0].recipientResolved = data[0];
                       utils.resolveUsers([result[0].sender], function(data) {
@@ -272,7 +313,7 @@ module.exports = function(app) {
     },
 
     // Marks a disposition as declined 
-    addComments: function(dispositionId, commenter, message, callback) {
+    addComments: function(dispositionId, commenter, message, attachments, callback) {
       var modified = false;
       db.findArray({ _id: dispositionId }, function (error, result) {
         if (result != null && result.length == 1) {
@@ -281,6 +322,7 @@ module.exports = function(app) {
             commenter: commenter,
             comments: message,
             date: new Date(),
+            attachments: attachments || []
           }
           comments.push(entry);
           result[0].comments = comments;
@@ -318,10 +360,22 @@ module.exports = function(app) {
     share: function(id, username, parties, message, callback) {
       var selector = {
         _id: app.ObjectID(id + ""),
-        "recipients.recipient": {
-          $in: [ username ]
-        }
+        $or: [
+        {
+          "recipients.recipient": {
+            $in: [ username ]
+          }
+        },
+        {
+          "sender": {
+            $in: [ username ]
+          }
+        },
+
+
+        ]
       }
+      console.log(selector);
       var notifyParties = function(err, result) {
         if (err) return callback(err, result);
         db.findArray(selector, function(err, result) {
@@ -438,7 +492,7 @@ module.exports = function(app) {
               var orgMap = map[orgName];
               var sortOrder = item.profile.echelon;
               if (heads[item.username]) {
-                sortOrder = -1;
+                sortOrder = "00";
               }
               if (!orgMap) {
                 orgMap = { 
@@ -449,6 +503,7 @@ module.exports = function(app) {
               }
               var data = {
                 label: item.username,
+                id: item.username,
                 sortOrder: sortOrder
               }
               data = _.merge(data, item);
@@ -456,6 +511,12 @@ module.exports = function(app) {
             }
           });
 
+          Object.keys(map).forEach(function(item) {
+            var org = map[item];
+            if (org && org.children) {
+              org.children = _.sortBy(org.children, "sortOrder");
+            }
+          });
           _.each(orgs, function(item) {
             if (map[item] && !map[item].processed) {
               var chop = item.lastIndexOf(";");
@@ -477,14 +538,14 @@ module.exports = function(app) {
             result.push(map[item]);
           });
 
-          _.each(result, function(item) {
-            children = _.sortBy(item.children, "label")
-          });
           cb(null, result);
         });
       });
 
       
-    }
+    },
+
+    saveAttachmentFile: saveAttachmentFile,
+    downloadAttachment: downloadAttachment
   }
 }

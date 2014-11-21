@@ -88,8 +88,15 @@
 
             <li>
               <a href="/help">
+                <i class="icon-info"></i>
+                Panduan
+              </a>
+            </li>
+
+            <li>
+              <a href="http://helpdesk.layanan.go.id" target="_blank">
                 <i class="icon-question"></i>
-                Bantuan
+                <em>Help Desk</em>
               </a>
             </li>
 
@@ -140,14 +147,16 @@
           <li><a id="admin-admin"
                  href="{{#localAdmin}}/localadmin/{{/localAdmin}}{{^localAdmin}}/admin/{{/localAdmin}}admin">Pengguna
             Admin</a></li>
-          <li><a id="admin-structure" href="{{#localAdmin}}/localadmin/{{/localAdmin}}{{^localAdmin}}/admin/{{/localAdmin}}admin-structure">Struktur Admin</a></li>
+          <li><a id="admin-structure" href="{{#localAdmin}}/localadmin/{{/localAdmin}}{{^localAdmin}}/admin/{{/localAdmin}}admin-structure">Struktur Pengguna</a></li>
 
           {{#localAdmin}}
           <li><a id="admin-job-title" href="/localadmin/job-title">Nama Jabatan</a></li>
           {{/localAdmin}}
           {{^localAdmin}}
           <li><a id="admin-role" href="/admin/role">Kewenangan</a></li>
+          <li><a id="admin-audit" href="/admin/audit">Rekam Jejak</a></li>
           {{/localAdmin}}
+
 
         </ul>
       </li>
@@ -174,7 +183,9 @@
         <li>
           <i class="icon-group"></i>
         </li>
-
+		<li>
+			&nbsp;<a href="">{{ title }}</a>
+		</li>
 
       </ul>
       <!--.breadcrumb-->

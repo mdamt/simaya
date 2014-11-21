@@ -1,4 +1,5 @@
 module.exports = function(app) {
+  var gearmanode = require("gearmanode");
   var org = require('../models/organization.js')(app)
     , jobTitle = require('../models/jobTitle.js')(app)
     , utils = require('../../sinergis/controller/utils.js')(app)
@@ -8,8 +9,10 @@ module.exports = function(app) {
     , deputyDb = app.db('deputy')
     , templateDb = app.db('template')
     , sinergisVar = app.get('sinergisVar')
+    , auditTrail = require("../models/auditTrail.js")(app)
     , ObjectID = app.ObjectID;
 
+  var auditTrail = require("../models/auditTrail.js")(app);
 
   // Find all letters containing organization path, it checks receivingOrganizations and senderOrganization
   // Returns via callback
@@ -462,36 +465,28 @@ module.exports = function(app) {
           } else {
 
             createFunction(path, param, function(v){
-              if (v.hasErrors() == false) {
-
-              } else {
-                vals.unsuccessful = true;
-                vals.form = true;
-                var pathErrors = {
-                  'You can only rename, not change the whole path': 'Nama instansi induk tidak dapat diubah dari sini',
-                  'No parent found': 'Tidak ada instansi induk dengan nama tersebut',
-                  'There is already a path with this name': 'Sudah ada instansi dengan nama tersebut',
-                }
-
-                vals.errorMessages = [];
-                if (v.errors.path != null) {
-                  for (var i = 0; i < v.errors.path.length; i ++) {
-                    vals.errorMessages.push( { errorTitle: pathErrors[v.errors.path[i]] });
+              auditTrail.record({
+                collection: "organization",
+                changes: {
+                  edit: vals.edit || req.body.edit,
+                  path: path,
+                  data: param
+                },
+                session: req.session.remoteData,
+                result: !vals.unsuccessful
+              }, function(err, audit) {
+                if(req.accepted.length > 0){
+                  if(req.accepted[0].subtype == 'json'){
+                    // send as json
+                    return res.send(vals);
+                  } else {
+                    return utils.render(req, res, template, vals, 'base-admin-authenticated');
                   }
                 }
-              }
 
-              if(req.accepted.length > 0){
-                if(req.accepted[0].subtype == 'json'){
-                  // send as json
-                  return res.send(vals);
-                } else {
-                  return utils.render(req, res, template, vals, 'base-admin-authenticated');
-                }
-              }
+                return utils.render(req, res, template, vals, 'base-admin-authenticated');
 
-              return utils.render(req, res, template, vals, 'base-admin-authenticated');
-
+              });
             })
           }
       })
@@ -513,12 +508,33 @@ module.exports = function(app) {
     createOrEdit(vals, "organization-new", org.create, req, res);
   }
 
+  var move = function(req, res) {
+    var client = gearmanode.client({servers: app.simaya.gearmanServer});
+    var options = {
+      source: req.body.source,
+      destination: req.body.destination
+    }
+
+    auditTrail.record({
+      collection: "organization",
+      changes: options,
+      session: req.session.remoteData
+    }, function(err, audit) {
+      var job = client.submitJob("moveOrganization", JSON.stringify(options));
+    });
+ 
+    res.send(200);
+  }
+
   var edit = function(req, res) {
     var vals = {
       title: sinergisVar.appName,
       edit: true
     }
 
+    if (req.body.operation == "move") {
+      return move(req, res);
+    }
     createOrEdit(vals, "organization-edit", org.edit, req, res);
   }
 
@@ -559,14 +575,22 @@ module.exports = function(app) {
 
    if (typeof(req.body.path) !== "undefined") {
       org.remove(path, function(v) {
-        if(req.query.json){
-          res.send({
-            success:true
-          });
-        }else{
-          vals.successful = true;
-          utils.render(req, res, "organization-remove", vals, 'base-admin-authenticated');
-        }
+        auditTrail.record({
+          collection: "organization",
+          changes: {
+            removedPath: path,
+          },
+          session: req.session.remoteData,
+        }, function(err, audit) {
+          if(req.query.json){
+            res.send({
+              success:true
+            });
+          }else{
+            vals.successful = true;
+            utils.render(req, res, "organization-remove", vals, 'base-admin-authenticated');
+          }
+        });
       });
     } else {
      if(req.query.json){

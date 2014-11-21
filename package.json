@@ -16,6 +16,7 @@
     "fabric": "^1.4.9",
     "file-preview": "*",
     "gcm": "1.0.1",
+    "gearmanode": "^0.1.8",
     "gm": "*",
     "gridfs-stream": "^0.5.1",
     "hogan.js": "*",
@@ -36,6 +37,7 @@
     "passport-local": "0.1.6",
     "passport-oauth2-client-password": "0.1.1",
     "pdfinfo": "git+https://KodeKreatif@github.com/KodeKreatif/node-pdfinfo.git",
+    "pdfkit": "^0.7.0",
     "prompt": "^0.2.12",
     "push-notify": "*",
     "request": "2.9.3",
@@ -46,6 +48,7 @@
   "devDependencies": {
     "chance": "^0.5.9",
     "mocha": "^1.21.4",
+    "qr-image": "^2.0.0",
     "should": "^4.0.4"
   }
 }

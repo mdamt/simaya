@@ -8,6 +8,7 @@ module.exports = function(app) {
   , org = require('../models/organization.js')(app)
   , moment = require('moment')
   , stat = require('./localadminstats')(app)
+  , auditTrail = require("../models/auditTrail.js")(app)
 
 
   var isValidOrganization = function(vals, req, res, callback) {
@@ -31,6 +32,7 @@ module.exports = function(app) {
 
   var userList = function(req, res, callback) {
     var vals = {
+	  title: 'Pengguna',
       localAdmin: true,
       username: req.session.currentUser
     };
@@ -40,9 +42,10 @@ module.exports = function(app) {
 
     adminSimaya.userBase(req, res, callback, vals, search);
   }
-
+  
   var adminList = function(req, res, callback) {
     var vals = {
+      title: 'Pengguna Admin',
       localAdmin: true,
       isAdmin: true
     };
@@ -73,7 +76,7 @@ module.exports = function(app) {
   var editUser = function(req, res) {
     var vals = {
       localAdmin: true,
-      title: 'Edit User',
+      title: 'Ubah Pengguna',
       myOrganization: req.session.currentUserProfile.organization, 
     };
 
@@ -85,7 +88,7 @@ module.exports = function(app) {
   var changePassword = function(req, res, callback) {
     var vals = {
       localAdmin: true,
-      title: 'Change Password',
+      title: 'Ubah Kata Sandi',
       username: req.params.id || req.body.username
     };
 
@@ -121,7 +124,16 @@ module.exports = function(app) {
     var myOrganization = req.body.organization || req.session.currentUserProfile.organization;
     if (req.body.path) {
       jobTitle.removeTitle(req.body.path, myOrganization, function(r) {
-        res.send(JSON.stringify(r));
+        auditTrail.record({
+          collection: "jobTitle",
+          changes: {
+            removed: req.body.path,
+            organization: myOrganization
+          },
+          session: req.session.remoteData,
+        }, function(err, audit) {
+          res.send(JSON.stringify(r));
+        });
       });
     } else {
       res.send("ERROR");
@@ -139,7 +151,17 @@ module.exports = function(app) {
         path: req.body.path
       }
       jobTitle.editTitle(data, function(r) {
-        res.send(JSON.stringify(r));
+        auditTrail.record({
+          collection: "jobTitle",
+          changes: {
+            edit: true,
+            data: data,
+            organization: myOrganization
+          },
+          session: req.session.remoteData,
+        }, function(err, audit) {
+          res.send(JSON.stringify(r));
+        });
       });
     } else {
       res.send("ERROR");
@@ -159,7 +181,17 @@ module.exports = function(app) {
         path: path, 
       }
       jobTitle.create(data, function(r) {
-        res.send(JSON.stringify(r));
+        auditTrail.record({
+          collection: "jobTitle",
+          changes: {
+            edit: false,
+            data: data,
+            organization: myOrganization
+          },
+          session: req.session.remoteData,
+        }, function(err, audit) {
+          res.send(JSON.stringify(r));
+        });
       });
     } else {
       res.send("ERROR");
@@ -169,7 +201,7 @@ module.exports = function(app) {
 
   var associateRole = function(req, res) {
     var vals = {
-      title: 'Associate role',
+      title: 'Kewenangan',
       username: req.params.id || req.body.username,
       localAdmin: true,
     }
@@ -187,7 +219,7 @@ module.exports = function(app) {
 
   var index = function(req, res){
     var vals = {
-      title: 'Administrator',
+      title: 'Dasbor',
       requireAdmin: true,
       localadmin: true,
       dashboardType : 'local',

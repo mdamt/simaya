@@ -1,9 +1,8 @@
-<ul class="nav nav-tabs">
-  <li class="{{#isIncoming}}active{{/isIncoming}}"><a href=/dispositions>Disposisi Masuk</a></li>
-  <li class="{{#isOutgoing}}active{{/isOutgoing}}"><a href=/dispositions/outgoing>Disposisi Keluar</a></li>
-</ul>
 
+<link rel="stylesheet" href="/upload/css/jquery.fileupload.css">
+<link rel="stylesheet" href="/upload/css/jquery.fileupload-ui.css">
 <p align="right">
+	<a href="#" class="btn btn-success" id="btn-print">Cetak</a>
   {{#isRecipient}}
 	<a href="#" class="btn btn-primary" id="btn-share-trigger">Bagikan</a>
   {{/isRecipient}}
@@ -388,6 +387,16 @@ Daftar semua disposisi yang dikeluarkan untuk surat ini dapat dilihat di <a href
 		<td class="span8">
 			{{comments}}<br/>
 			<i>{{formattedDate}}</i>
+            {{#attachments.length}}
+            <div>
+              Daftar lampiran:
+            <ol>
+            {{#attachments}}
+            <li> <a href="/disposition/attachment/{{_id}}">{{title}}</a>
+            {{/attachments}}
+            </ol>
+            </div>
+            {{/attachments.length}}
 		</td>
 	</tr>
 	{{/comments}}
@@ -400,7 +409,18 @@ Daftar semua disposisi yang dikeluarkan untuk surat ini dapat dilihat di <a href
 		<div>
 		<td class="span7">
 			<textarea rows="5" id="comment-textarea" class="comment-textarea presence-status span8 presence-status-static" placeholder="Klik di sini untuk membuat komentar"></textarea>
-			<br><button class="btn btn-success" id="btn-comment" hidden>Kirim komentar</a>
+			<br>
+          <div class="span6" id="fileAttachments-list">
+            <div id="letter-fileAttachments-placeholder" class="files"></div>
+            <span id="fileupload" style="display: none;" class="btn btn-mini btn-info fileinput-button">
+              <i class="icon-plus"></i>
+              <span>Berkas</span>
+              <input type="file" name="files[]" multiple>
+            </span>
+            <em>&nbsp; Maksimal berukuran 10 mb</em>
+          </div>
+
+			<button class="btn btn-success" id="btn-comment" hidden>Kirim komentar</button>
 		</td>
 	</tr>
 </table>
@@ -440,8 +460,292 @@ Daftar semua disposisi yang dikeluarkan untuk surat ini dapat dilihat di <a href
   </div>
 </div>
 
+<div id="print-dialog" class="modal hide fade">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <h3>Cetak disposisi</h3>
+  </div>
+  <div class="modal-body print">
+{{#letter}}
+<table class="table">
+	<tbody>
+		<tr>
+			<td class="span3" style="background-color:#f9f9f9;"><strong>Nomor Agenda Surat Masuk</strong></td>
+			<td class="span3">
+				{{incomingAgendaNumber}}
+			</td>
+			<td class="span3" style="background-color:#f9f9f9;"><strong>Tanggal Penerimaan Surat</strong></td>
+			<td class="span3">
+				{{#readDate}}
+        <span class="moment" data-format="dddd, DD MMMM YYYY" data-value="{{readDate}}"></span>
+				{{/readDate}}
+			</td>
+		</tr>
+		<tr>
+			<td class="span3" style="background-color:#f9f9f9;"><strong>Nomor Surat</strong></td>
+			<td class="span3">
+				{{mailId}}
+			</td>
+			<td class="span3" style="background-color:#f9f9f9;"><strong>Tanggal Surat</strong></td>
+			<td class="span3">
+				{{formattedDate}}
+			</td>
+		</tr>
+		<tr>
+			<td class="span3" style="background-color:#f9f9f9;"><strong>Tujuan</strong></td>
+			<td class="span3">
+				<ol style="list-style:none;margin:0">
+					{{#recipients}}
+          <li><span class="resolve-name">{{.}}</span>
+					{{/recipients}}
+          
+					{{#recipientsResolved}}
+					<li>
+						{{name}}<br/> {{title}} {{organization}} <br>(Golongan {{class}})
+					</li>
+					{{/recipientsResolved}}
+				</ol>
+			</td>
+
+			<td class="span3" style="background-color:#f9f9f9;"><strong>Pengirim</strong></td>
+			<td class="span3">
+				{{#senderManual.name}}
+		        {{senderManual.name}}<br/>
+		        {{senderManual.organization}}
+		        {{/senderManual.name}}
+		        {{^senderManual.name}}
+				{{/senderManual.name}}
+		 
+            <span class="add-as-contact" data-username="{{senderResolved.username}}"><span class="resolve-name">{{sender}}</span></span>
+			</td>
+		</tr>
+	</tbody>
+</table>
+
+
+{{#ccListResolved.length}}
+<table class="table table-bordered">
+	<thead>
+		<tr>
+		<th>Tembusan</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+		<td width="50%">
+			<ol>
+			{{#ccListResolved}}
+      <li> {{name}}, {{title}} {{organization}} (Golongan {{class}}) {{#readDate}}(<span class="label label-success">dibaca</span>: {{readDate}}){{/readDate}}
+			{{/ccListResolved}}
+			</ol>
+		</td>
+		</tr>
+	</tbody>
+</table>
+{{/ccListResolved.length}}
+<br>
+
+<table class="table table-bordered">
+	<tbody>
+		<tr>
+			<td class="span4" style="background-color:#f9f9f9;">Jenis Nota Dinas</td>
+			<td class="span8">
+          <span class="resolve-letter-data" data-type="type" data-value="{{type}}"></span>
+			</td>
+		</tr>
+		<tr>
+			<td class="span4" style="background-color:#f9f9f9;">Kecepatan Penyampaian</td>
+			<td class="span8">
+				{{#priorities.p0}}
+				<span class="label label-success">Biasa</span>
+				{{/priorities.p0}}
+
+				{{#priorities.p1}}
+				<span class="label label-warning">Segera</span>
+				{{/priorities.p1}}
+
+				{{#priorities.p2}}
+				<span class="label label-danger">Amat Segera</span>
+				{{/priorities.p2}}
+			</td>
+		</tr>
+		<tr>
+			<td class="span4" style="background-color:#f9f9f9;">Tingkat Keamanan</td>
+			<td class="span8">
+				{{#classifications.c0}}
+				<span class="label label-success">Biasa</span>
+				{{/classifications.c0}}
+
+				{{#classifications.c1}}
+				<span class="label label-warning">Rahasia</span>
+				{{/classifications.c1}}
+
+				{{#classifications.c2}}
+				<span class="label label-danger">Amat Rahasia</span>
+				{{/classifications.c2}}
+			</td>
+		</tr>
+		<tr>
+			<td class="span4" style="background-color:#f9f9f9;">Isi Ringkas</td>
+			<td class="span8">
+				{{comments}}
+			</td>
+		</tr>
+	</tbody>
+</table>
+{{/letter}}
+
+{{#dispositions}}
+{{#recipientList}}
+
+<table class="table table-bordered">
+	<tbody>
+		<tr>
+			<td class="span3" style="background-color: #f9f9f9;">Tanggal Disposisi</td>
+			<td class="span3">
+				{{formattedDate}}
+			</td>
+			<td class="span3" style="background-color: #f9f9f9;">Tanggal Selesai</td>
+			<td class="span3">
+				{{formattedDate}}
+			</td>
+		</tr>
+		<tr>
+			<td class="span3" style="background-color: #f9f9f9;">Pengirim</td>
+			<td class="span3">
+				<!--<span class="add-as-contact contact-avatar" data-username="{{senderResolved.username}}">{{senderResolved.name}}</span>-->
+				{{senderResolved.name}}
+			</td>
+			<td class="span3" style="background-color: #f9f9f9;">Penerima</td>
+			<td class="span3">
+				<a name="recipient-{{recipient}}"></a><span class="resolve-name add-as-contact contact-avatar" data-username="{{recipient}}">{{recipient}}</span>
+				  <br/>
+				  {{#declinedDate}}
+				  (<span class="label label-important">ditolak</span>: {{formattedDeclinedDate}})<br>
+				  <strong>Pesan penolakan:</strong> {{declineMessage}}
+				  <br/>
+				  {{/declinedDate}}
+				  {{^declinedDate}}
+				  {{#readDate}}(<span class="label label-success">dibaca</span>: {{formattedReadDate}})<br>{{/readDate}}
+				  {{#followedUpDate}}(<span class="label label-success">ditanggapi</span>: {{formattedFollowedUpDate}})<br/>{{/followedUpDate}}
+				  {{#followedUpLetter}}Tanggapan: <a class="btn" href="/letter/read/{{followedUpLetter}}">Baca</a>{{/followedUpLetter}}
+				  {{/declinedDate}}
+			</td>
+		</tr>
+		<tr>
+			<td class="span3" style="background-color: #f9f9f9;">Tingkat Keamanan</td>
+			<td class="span3">
+				{{#security0}}<span class="label label-success">Biasa</span>{{/security0}}
+		        {{#security1}}<span class="label label-warning">Rahasia</span>{{/security1}}
+		        {{#security2}}<span class="label label-important">Sangat Rahasia &nbsp;<i class="icon-warning-sign icon-white"></i></span>{{/security2}} &nbsp;
+			</td>
+			<td class="span3" style="background-color: #f9f9f9;">Kecepatan Penyampaian</td>
+			<td class="span3">
+				{{#priority0}}<span class="label label-success">Biasa</span>{{/priority0}}
+		        {{#priority1}}<span class="label label-warning">Segera</span>{{/priority1}}
+		        {{#priority2}}<span class="label label-important">Amat Segera</span>{{/priority2}} &nbsp;
+			</td>
+		</tr>
+		<tr>
+			<td class="span3" style="background-color: #f9f9f9;">Instruksi</td>
+			<td class="span3">
+				{{#instruction0}}Jawaban{{/instruction0}}
+		        {{#instruction1}}Ditindak lanjuti{{/instruction1}}
+		        {{#instruction2}}Ditanggapi tertulis{{/instruction2}}
+		        {{#instruction3}}Disiapkan makalah/sambutan/presentasi sesuai tema{{/instruction3}}
+		        {{#instruction4}}Koordinasikan dengan{{/instruction4}}
+		        {{#instruction5}}Diwakili &amp; laporkan hasilnya{{/instruction5}}
+		        {{#instruction6}}Dihadiri &amp; dilaporkan hasilnya{{/instruction6}}
+		        {{#instruction7}}Disiapkan surat/memo dinas (internal){{/instruction7}}
+		        {{#instruction8}}Arsip{{/instruction8}}
+		        {{#instruction9}}Lain-lain{{/instruction9}}
+			</td>
+			<td class="span3" style="background-color: #f9f9f9;">Pesan</td>
+			<td class="span3">
+				{{message}}
+			</td>
+		</tr>
+	</tbody>
+</table>
+
+
+{{/recipientList}}
+{{/dispositions}}
+
+
+  </div>
+  <div class="modal-footer">
+    <a href="#" data-dismiss="modal" class="btn">Tutup</a>
+    <a id="btn-start-printing" href="#" class="btn btn-primary" disabled>Cetak</a>
+  </div>
+</div>
+
+<script id="template-upload" type="text/x-tmpl">
+{% for (var i=0, file; file=o.files[i]; i++) { %}
+  <div class="template-upload fade">
+    <p>{%=file.name%} <a href="#" class="remove-button cancel">×</a> </p>
+    {% if (!o.files.error) { %}
+    <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" style="width:0%;"></div></div>
+    {% } %}
+  </div>
+{% } %}
+</script>
+<!-- The template to display files available for download -->
+<script id="template-download" type="text/x-tmpl">
+{% for (var i=0, file; file=o.files[i]; i++) { %}
+  <div class="template-download fade">
+    {% if (file.error) { %}
+    <div><span class="label label-important">Error</span> {%=file.error%} <button class="btn-link delete">×</button> </div>
+    {% } else { %}
+    <p>
+      <a href="/disposition/attachment/{%=file.path%}" data-attachment-id="{%=file.path%}" data-letter-id="{%=file.letterId%}" class="comments-attachments attachment-preview">{%=file.name%}</a> 
+      <button class="btn-link delete" data-type="DELETE" data-url="/disposition/attachments/{%=file.letterId%}/{%=file.path%}">×</button>
+    </p>
+    {% } %}
+  </div>
+{% } %}
+</script>
+
+<script type="text/javascript" src="/upload/js/vendor/jquery.ui.widget.js"></script>
+<script type="text/javascript" src="/upload/js/vendor/tmpl.min.js"></script>
+<script type="text/javascript" src="/upload/js/jquery.fileupload.js"></script>
+<script type="text/javascript" src="/upload/js/jquery.fileupload-ui.js"></script>
+<script type="text/javascript" src="/upload/js/jquery.fileupload-process.js"></script>
+
 
 <script>
+
+// fileupload widget
+$(function () {
+  $('#fileupload').show();
+
+  $('#fileupload').fileupload({
+    url: '/disposition/attachments',
+    autoUpload : true,
+    filesContainer : '.files',
+    prepend : true,
+    formData : { _id: '{{letter._id}}'}
+  });
+
+  // get attachments
+  $.ajax({
+    url: $('#fileupload').fileupload('option', 'url') + '/{{letter._id}}',
+    dataType: 'json',
+    context: $('#fileupload')[0]
+  }).always(function () {
+    $(this).removeClass('fileupload-processing');
+  }).done(function (result) {
+    $(this).fileupload('option', 'done')
+      .call(this, $.Event('done'), {result: result});
+  });
+
+  $('input').css('color', '#393939');
+  $('textarea').css('color', '#393939');
+
+});
+
+
+
 var shareMode = "selection";
 var shareThis = function() {
   var id = "{{dispositionId}}";
@@ -490,9 +794,19 @@ $(document).ready(function() {
     e.preventDefault();
     $(this).attr("disabled", true);
     $(this).text("Sedang mengirim komentar...");
+    var attachments = [];
+    $(".comments-attachments").each(function(index, item) {
+      var $item = $(item);
+      attachments.push({
+        _id: $item.attr("data-attachment-id"),
+        title: $item.text()
+      });
+    });
+
     var data =  { 
         dispositionId: "{{_id}}", 
         message: $("#comment-textarea").val(),
+        attachments: attachments 
       }
     $.post("/disposition/addComments", data,
     function(data) {
@@ -513,6 +827,19 @@ $(document).ready(function() {
     e.preventDefault();
     shareThis();
   });
+  $("#btn-print").click(function(e) {
+    $("#print-dialog").modal("show");
+  });
+  $("#btn-start-printing").click(function(e) {
+    html = "<link rel='stylesheet' href='" + window.location.origin + "/css/simaya.css' ></link>";
+    html += $(".print").html();
+    var w = window.open("", "width=1,height=1");
+    w.document.write(html);
+    setTimeout(function() {
+    w.print();
+    w.close();
+    }, 1000);
+  });
   
 });
 </script>
@@ -523,3 +850,4 @@ $(document).ready(function() {
 <script type="text/javascript" src="/js/attachment-preview.js"></script>
 <script src='/js/contacts.js'></script>
 <script type="text/javascript" src="/js/letter-data.js"></script>
+

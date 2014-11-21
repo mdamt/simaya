@@ -5,8 +5,10 @@ module.exports = function (app) {
     , org = require('../models/organization.js')(app)
     , cOrg = require('./organization.js')(app)
     , role = require('../../sinergis/models/role.js')(app)
+    , auditTrail = require("../models/auditTrail.js")(app)
     , moment = require('moment')
     , df = require('node-diskfree')
+    , _ = require("lodash")
 
   Array.prototype.unique = function () {
     var o = {}, i, l = this.length, r = []
@@ -24,12 +26,13 @@ module.exports = function (app) {
 
     profile.emailList = profile.emailList || []
     profile.emailList = (typeof profile.emailList == 'string') ? [profile.emailList] : profile.emailList.unique()
-      
+
     var data = {
         username: req.body.username,
         password: req.body.password,
         password2: req.body.password2,
-        profile: profile
+        profile: profile,
+        active: false
       };
 
     if (req.body.roles) {
@@ -37,7 +40,7 @@ module.exports = function (app) {
     }
 
     if (req.body.active) {
-      data.active = true; 
+      data.active = true;
     }
 
     user.create(
@@ -129,18 +132,30 @@ module.exports = function (app) {
 
           } else {
             vals.successful = true;
-            if (req.body.saveAndClose) {
-              if (req.path.indexOf('/localadmin') != -1) {
-                res.redirect('/localadmin/user');
+            auditTrail.record({
+              collection: "user",
+              changes: {
+                newUser: {
+                  name: req.body.username,
+                  profiled: profile
+                }
+              },
+              session: req.session.remoteData,
+              result: vals.successful
+            }, function(err, audit) {
+              if (req.body.saveAndClose) {
+                if (req.path.indexOf('/localadmin') != -1) {
+                  res.redirect('/localadmin/user');
+                } else {
+                  res.redirect('/admin/user');
+                }
               } else {
-                res.redirect('/admin/user');
+                vals.form = true;
+                vals.username = "";
+                vals.profile = {};
+                utils.render(req, res, 'admin-new-user', vals, 'base-admin-authenticated');
               }
-            } else {
-              vals.form = true;
-              vals.username = "";
-              vals.profile = {};
-              utils.render(req, res, 'admin-new-user', vals, 'base-admin-authenticated');
-            }
+            });
           }
         });
       });
@@ -153,7 +168,7 @@ module.exports = function (app) {
 
   var newUserBase = function (req, res, calback, vals) {
     var vals = vals || {
-      title: 'New user',
+      title: 'Pengguna Baru',
       requireAdmin: true
     }
 
@@ -175,7 +190,7 @@ module.exports = function (app) {
         res.redirect("/")
       }
     }
-
+    var isPolitical = (req.body.nip === 000000000000000000);
     role.list(function(roleList) {
       vals.roleList = roleList;
       if (typeof(req.body) === "object" && Object.keys(req.body).length != 0) {
@@ -183,7 +198,7 @@ module.exports = function (app) {
         vals.profile = req.body.profile;
 
         if (parseInt(req.body.profile.echelon) != 0) {
-          if (isLocalAdmin && req.body.profile.nip.length != 18) {
+          if (isLocalAdmin && req.body.profile.nip.length != 18 && !isPolitical) {
             vals.unsuccessful = true;
             vals.form = true;
             vals.messages = vals.messages || []
@@ -194,7 +209,7 @@ module.exports = function (app) {
 
         user.list({ search: {'profile.nip': req.body.profile.nip}}, function (r) {
           if (isLocalAdmin && r[0] != null && parseInt(req.body.profile.echelon) != 0) {
-            if (r[0].profile.nip == req.body.profile.nip && r[0].username != req.body.username) {
+            if (r[0].profile.nip == req.body.profile.nip && r[0].username != req.body.username && !isPolitical) {
               vals.unsuccessful = true;
               vals.existNip = true;
               vals.form = true;
@@ -225,37 +240,52 @@ module.exports = function (app) {
     if (req.body['serialized-phones']) {
       profile.phones = req.body['serialized-phones'].split(',')
     }
-    user.modifyProfile(req.body.username, profile, function (v) {
-      if (v.hasErrors()) {
-        vals.unsuccessful = true;
-        vals.form = true;
-        vals.user = req.body.username;
-        vals.errors = v.errors;
-        utils.render(req, res, 'admin-edit-user', vals, 'base-admin-authenticated');
-      } else {
-        if (req.body.active) {
-          user.setActive(req.body.username, function (r) {
-            if (r == true) {
-              vals.successful = true;
-            } else {
-              vals.unsuccessful = true;
-              vals.unableToActivate = true;
-            }
-            utils.render(req, res, 'admin-edit-user', vals, 'base-admin-authenticated');
-          });
-        } else {
-          user.setInActive(req.body.username, function (r) {
-            if (r == true) {
-              vals.successful = true;
-            } else {
-              vals.unsuccessful = true;
-              vals.unableToActivate = true;
-            }
-            utils.render(req, res, 'admin-edit-user', vals, 'base-admin-authenticated');
-          });
 
+    var modify = function(cb) {
+      user.modifyProfile(req.body.username, profile, function (v) {
+        if (v.hasErrors()) {
+          vals.unsuccessful = true;
+          vals.form = true;
+          vals.user = req.body.username;
+          vals.errors = v.errors;
+          utils.render(req, res, 'admin-edit-user', vals, 'base-admin-authenticated');
+          cb(false);
+        } else {
+          if (req.body.active) {
+            user.setActive(req.body.username, function (r) {
+              if (r == true) {
+                vals.successful = true;
+              } else {
+                vals.unsuccessful = true;
+                vals.unableToActivate = true;
+              }
+              utils.render(req, res, 'admin-edit-user', vals, 'base-admin-authenticated');
+              cb(r);
+            });
+          } else {
+            user.setInActive(req.body.username, function (r) {
+              if (r == true) {
+                vals.successful = true;
+              } else {
+                vals.unsuccessful = true;
+                vals.unableToActivate = true;
+              }
+              utils.render(req, res, 'admin-edit-user', vals, 'base-admin-authenticated');
+              cb(r);
+            });
+          }
         }
-      }
+      });
+    }
+
+    modify(function(success) {
+      auditTrail.record({
+        collection: "user",
+        changes: profile,
+        session: req.session.remoteData,
+        result: success
+      }, function(err, audit) {
+      });
     });
   }
 
@@ -267,7 +297,7 @@ module.exports = function (app) {
   var editUserBase = function (req, res, callback, vals) {
 
     var vals = vals || {
-      title: 'Edit user',
+      title: 'Ubah Pengguna',
       requireAdmin: true
     }
 
@@ -388,7 +418,7 @@ module.exports = function (app) {
 
   var userListBase = function (req, res, callback, vals, search) {
     var vals = vals || {
-      title: 'User management',
+      title: 'Pengguna',
       requireAdmin: true,
       isAdminMenu: true
     }
@@ -428,7 +458,7 @@ module.exports = function (app) {
 
   var adminListBase = function (req, res, callback, vals, search) {
     var vals = vals || {
-      title: 'User management',
+      title: 'Pengguna Admin',
       isAdmin: true,
       requireAdmin: true,
       isAdminMenu: true
@@ -585,7 +615,7 @@ module.exports = function (app) {
 
   var adminStructure = function (req, res) {
     var vals = {
-      title: 'Struktur Admin',
+      title: 'Struktur Pengguna',
       isAdmin: true,
       isLocalAdmin: false,
       requireAdmin: true,
@@ -774,12 +804,21 @@ module.exports = function (app) {
   var removeHeadInOrg = function (req, res) {
     org.edit(req.body.path, {
       path: req.body.path,
-      removeHead: true 
+      removeHead: true
     }, function(v) {
       if (v.hasErrors()) {
         res.send({status: "error", error: v.errors})
       } else {
-        res.send({status: "ok"});
+        auditTrail.record({
+          collection: "organization",
+          changes: {
+            path: req.body.path,
+            head: "removed"
+          },
+          session: req.session.remoteData
+        }, function(err, audit) {
+          res.send({status: "ok"});
+        });
       }
     });
   }
@@ -789,30 +828,73 @@ module.exports = function (app) {
       path: req.body.path,
       head: req.body.head
     }, function(v) {
-      if (v.hasErrors()) {
+      if (v && v.hasErrors()) {
         res.send({status: "error", error: v.errors})
       } else {
-        res.send({status: "ok"});
+        auditTrail.record({
+          collection: "organization",
+          changes: {
+            path: req.body.path,
+            head: req.body.head
+          },
+          session: req.session.remoteData
+        }, function(err, audit) {
+          res.send({status: "ok"});
+        });
       }
     });
   };
 
+  var auditList = function(req, res) {
+    var date = new Date(req.query.date);
+    if (isNaN(date.valueOf())) {
+      date = new Date();
+    }
+    var vals = {
+      date: date
+    };
+    var options = { date: date, limit: 10, page: 1 };
+
+    if (req.query.page) options.page = req.query.page;
+
+    auditTrail.list(options, function(err, result) {
+      _.each(result.data, function(item) {
+        item.changes = JSON.stringify(item.changes, null, "  ");
+        item.session = JSON.stringify(item.session, null, "  ");
+        console.log(item);
+      });
+      vals.total = result.total;
+      vals.list = result.data;
+      vals.page = options.page;
+      utils.render(req, res, 'admin-audit-list', vals, 'base-admin-authenticated');
+    });
+  }
+
+  var auditDetail = function(req, res) {
+    var id = req.param.is
+    auditTrail.detail({ id: id}, function(err, result) {
+      res.send(result || {});
+    });
+  }
+
   return {
-    newUser: newUser, 
-    newUserBase: newUserBase, 
-    editUser: editUser, 
-    editUserBase: editUserBase, 
-    removeUsers: removeUsers, 
-    user: userList, 
-    userBase: userListBase, 
-    userListJSON: userListJSON, 
-    admin: adminList, 
-    adminBase: adminListBase, 
-    diskStatus: diskStatus, 
-    adminStructure: adminStructure, 
+    newUser: newUser,
+    newUserBase: newUserBase,
+    editUser: editUser,
+    editUserBase: editUserBase,
+    removeUsers: removeUsers,
+    user: userList,
+    userBase: userListBase,
+    userListJSON: userListJSON,
+    admin: adminList,
+    adminBase: adminListBase,
+    diskStatus: diskStatus,
+    adminStructure: adminStructure,
     adminListInOrgJSON: adminListInOrgJSON,
     userListInOrgJSON: userListInOrgJSON,
     headInOrgJSON: headInOrgJSON,
-    removeHeadInOrg: removeHeadInOrg
+    removeHeadInOrg: removeHeadInOrg,
+    auditList: auditList,
+    auditDetail: auditDetail
   }
 };

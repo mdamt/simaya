@@ -1,9 +1,5 @@
 <input type=hidden name="_id" value="{{_id}}">
 <input type=hidden name="_id" value="{{_id}}">
-<ul class="nav nav-tabs">
-  <li ><a href=/incoming>Surat Masuk</a></li>
-  <li ><a href=/outgoing>Surat Keluar</a></li>
-</ul>
 {{^letter}}
 	<h2>Surat tidak dapat dibaca</h2>
   <p>
@@ -226,13 +222,26 @@
 		</table>			
 
 	 {{^letter.outgoingAgenda}}
-    <div class="controls" style="margin-top: 100px;margin-bottom: 50px">
+    <div class="controls" style="margin-top: 50px;margin-bottom: 50px">
+	<h4 class="lighter underline">Pemeriksa surat</h4>
       <div id="reviewers-loading" class="">
         <span class="fa fa-spin fa-spinner"></span> Memuat daftar pemeriksa...
       </div>
-      <ul class="wizard-steps" id="reviewers-list" data-originator="{{letter.originator}}" data-current="{{letter.currentReviewer}}" data-date="{{letter.creationDate}}" data-readonly="true" data-id="{{letter._id}}" data-sender="{{letter.sender}}">
-        <li class="template hidden"><span class="step"></span><span class="title"></span></li>
-      </ul>
+
+      <div class="timeline control line dialogs" id="reviewers-list" data-originator="{{letter.originator}}" data-current="{{letter.currentReviewer}}" data-date="{{letter.creationDate}}" data-readonly="true" data-id="{{letter._id}}" data-sender="{{letter.sender}}" data-status="{{status}}">
+        <div class="itemdiv dialogdiv reviewer-item template hidden">
+          <div class="user">
+            <span class="user contact-avatar timeline comment me " data-username="{{username}}"></span>
+          </div>
+          <div class="body">
+            <div class="step"> </div>
+            <div class="name">
+              <span class="title resolve-name"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
     <div style="clear: both;"></div>
 	 {{/letter.outgoingAgenda}}
@@ -245,6 +254,7 @@
   <div class="control-group" ng-app="ngWebODF">
     <div class="letter-content-wrapper">
       <webodf readonly="yes" url="/letter/content/{{_id}}" name="odf" ></webodf>
+      <a href="/letter/content-pdf/{{_id}}" class="btn btn-info">Cetak</a>
     </div>
   </div>
   {{/content.0}}
@@ -255,7 +265,7 @@
 	<ol>
 		{{#fileAttachments}}
 		<li>
-			<a data-href="/letter/attachment/{{id}}" data-attachment-id="{{id}}" data-letter-id="{{_id}}" class="attachment-preview" 
+			<a data-href="/letter/attachment/{{path}}" data-attachment-id="{{path}}" data-letter-id="{{_id}}" class="attachment-preview" 
 			{{#allowDisposition}}
     		data-allow-disposition="true"
 			{{/allowDisposition}}
@@ -402,6 +412,39 @@
 {{/isSendingOrganization}}
 
 {{^isSendingOrganization}}
+  <H3>Surat Terkait</H3>
+
+    <script>
+var letterLinks = [];
+{{#links}}
+letterLinks.push({
+  _id: "{{_id}}",
+  title: "{{title}}"
+});
+{{/links}}
+    </script>
+
+    <div class="link-letter" 
+         data-initial-data=""
+         data-letter-id="{{_id}}"
+         data-button-class="btn btn-info btn-small"
+         data-title="Kaitkan surat"
+         data-loading-label="Memuat data..."
+         data-dismiss-label="Batal"
+         data-accept-label="Pilih"
+         data-can-update="true"
+         data-button-update-label="Update"
+         data-button-search-label="Cari"
+         data-button-outgoing-agenda-label="Agenda Keluar"
+         data-button-incoming-agenda-label="Agenda Masuk"
+         data-button-dismiss-letter-label="[hapus]"
+         data-table-date-label="Tanggal"
+         data-table-letter-number-label="Nomor Surat"
+         data-table-agenda-label="Nomor Agenda"
+         data-table-sender-label="Atas Nama"
+         data-table-title-label="Perihal"
+         data-button-label="Cari surat untuk dikaitkan..."></div>
+
   {{#dispositions.length}}
   <hr/>
   <br/>
@@ -537,3 +580,11 @@
 <script src='/js/contacts.js'></script>
 <script type="text/javascript" src="/js/reviewer-list.js"></script>
 <script type="text/javascript" src="/js/letter-data.js"></script>
+<script type="text/javascript" src="/js/pagination.js"></script>
+<script type="text/javascript" src="/js/link-letter.js"></script>
+<script>
+  $(document).ready(function() {
+    letterLinks = letterLinks || [];
+    $(".link-letter").linkLetter(letterLinks);
+  });
+</script>

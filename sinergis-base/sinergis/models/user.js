@@ -186,7 +186,6 @@ module.exports = function(app) {
     //    validator: The validator
     create: function (data, callback) {
       db.getCollection(function (error, collection) {
-        data.active = false
         data._id = collection.pkFactory.createPk();
 
         db.validateAndInsert(data, function (error, validator) {
@@ -837,6 +836,7 @@ module.exports = function(app) {
               }
               var data = {
                 label: item.username,
+                id: item.username,
                 sortOrder: sortOrder
               }
               data = _.merge(data, item);

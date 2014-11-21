@@ -22,7 +22,9 @@ module.exports = function(app) {
     , announcement = require('../simaya/controller/announcement.js')(app)
     , timeline = require('../simaya/controller/timeline.js')(app)
     , box = require('../simaya/controller/box.js')(app)
-    , api2 = require('./api2')(app);
+    , printControl = require('../simaya/controller/print-control.js')(app)
+    , api2 = require('./api2')(app)
+    , api4 = require('./api4')(app)
 
   app.get('/', utils.requireLogin, session.isAdmin);
   app.get('/', utils.requireLogin, timeline.index);
@@ -57,7 +59,7 @@ module.exports = function(app) {
 
   app.post('/letter/reject', utils.requireLogin, letter.reject);
   
-  app.get('/letter/read/:id', utils.requireLogin, letter.viewLetter);
+  app.get('/letter/read/:id', utils.requireLogin, notification.updateState,  letter.viewLetter);
   app.get('/letter/single/:id', utils.requireLogin, letter.viewSingleLetter);
   app.get('/letter/attachment/:id', utils.requireLogin, letter.downloadAttachment);
   app.all('/letter/receive/:id', utils.requireLogin, letter.receive);
@@ -75,13 +77,17 @@ module.exports = function(app) {
   app.get('/disposition/new', utils.requireLogin, disposition.create);
   app.post('/disposition/new/:id', utils.requireLogin, disposition.create);
   app.get('/dispositions', utils.requireLogin, disposition.list);
+  app.get('/dispositions/cc', utils.requireLogin, disposition.listCc);
   app.get('/dispositions/outgoing', utils.requireLogin, disposition.listOutgoing);
-  app.get('/disposition/read/:id', utils.requireLogin, disposition.view);
+  app.get('/disposition/read/:id', utils.requireLogin, notification.updateState, disposition.view);
   app.get('/disposition/getRecipients', utils.requireLoginWithoutUpdate, disposition.getRecipientCandidates);
   app.get('/disposition/getShareRecipients', utils.requireLoginWithoutUpdate, disposition.getShareRecipientCandidates);
   app.post('/disposition/decline', utils.requireLogin, disposition.decline);
   app.post('/disposition/addComments', utils.requireLogin, disposition.addComments);
+  app.post('/disposition/attachments', utils.requireLogin, disposition.uploadAttachment);
+  app.get('/disposition/attachment/:id', utils.requireLogin, disposition.downloadAttachment);
   app.get('/disposition/redispositioned', utils.requireLogin, disposition.isReDispositioned);
+  app.get('/disposition/findSuperiors', utils.requireLogin, disposition.findSuperiors);
   app.post('/disposition/share', utils.requireLogin, disposition.share);
 
   app.get('/notification/count', utils.requireLoginWithoutUpdate, notification.count);
@@ -200,4 +206,5 @@ module.exports = function(app) {
   app.post("/box/delete/file", utils.requireLogin, box.deleteFile);
   app.post("/box/delete/dir", utils.requireLogin, box.deleteDir);
   
+  app.get('/print-control/:id', utils.requireLogin, printControl.view);
 }

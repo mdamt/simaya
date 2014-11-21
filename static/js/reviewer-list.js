@@ -45,7 +45,7 @@ var updateReviewerList = function() {
       .addClass("btn btn-info btn-small hidden")
       .text("Tambahkan")
       .css("margin-top", "10px")
-      .click(function() {
+      .click(function(e) {
         var i = tree.selectedNode; 
         if (i) {
           var data = JSON.parse(JSON.stringify(i.data));
@@ -54,6 +54,7 @@ var updateReviewerList = function() {
           popover.popover("hide");
           populateReviewerList();
           checkAddButton();
+          popover.active = false;
         }
       });
       ;
@@ -66,8 +67,20 @@ var updateReviewerList = function() {
       }
     });
 
+   var c = $("<div>")
+      .addClass("btn btn-warning btn-small")
+      .text("Batal")
+      .css("margin-top", "10px")
+      .click(function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        popover.active = false;
+        popover.popover("hide");
+      });
+  
     e.append(select);
     e.append(b);
+    e.append(c);
     setTimeout(function() {
       tree.render("#new-reviewer");
     }, 500);
@@ -126,19 +139,11 @@ var updateReviewerList = function() {
     popover.attr("id", "add-reviewer-button");
     popover.addClass("fa fa-plus clickable");
     popover.removeClass("hidden");
-    popover.tooltip({placement: "bottom", title: "Tambahkan pemeriksa lain"});
-    popover.attr("data-original-title", "Pilih pemeriksa tambahan");
+    popover.attr("title", "Pilih pemeriksa tambahan");
     popover.attr("data-content", placeholderString);
     popover.attr("data-html", "true");
     popover.attr("data-placement", "top");
-    popover.click(function() {
-      $(this).popover({
-        html: true,
-      });
-      setTimeout(function() {
-        populateAllReviewers();
-      }, 500);
-    });
+    popover.css("margin: 10px");
   }
 
   var populateReviewerList = function() {
@@ -217,23 +222,44 @@ var updateReviewerList = function() {
       $item.removeClass("hidden");
       $item.removeClass("template");
       if (item && item.type == "add-button") {
-        $item.css("width", "5%");
+        $item.css("width", "30%");
         var step = $item.find(".step");
+        if (popover) {
+          popover.popover("destroy");
+        }
         popover = step;
         setupAddButton();
         $item.addClass("review-add");
+        $item.find(".title").text("Tambahkan pemeriksa");
         
+        $item.find(".body").click(function(e) {
+          if (popover.active) return;
+          e.stopPropagation();
+          var p = popover.popover({
+            html: true,
+          });
+          p.popover("show");
+          popover.active = true;
+          setTimeout(function() {
+            populateAllReviewers();
+          }, 500);
+        });
       } else {
-        if (item.username == currentReviewer && !approved) 
+        var step = $item.find(".step");
+        if (item.username == currentReviewer && !approved) { 
+          $item.find(".body").prepend($("<span>").addClass("fa fa-envelope reviewer-current").attr("title","Pemeriksa saat ini"));
           $item.addClass("review-current");
-        else if (item.username == "tu" && approved) 
+        } else if (item.username == "tu" && approved)  {
+          $item.find(".body").prepend($("<span>").addClass("fa fa-envelope reviewer-current").attr("title","Menunggu pengiriman"));
           $item.addClass("review-current");
-        else if (item.action == "approved") 
+        } else if (item.action == "approved") 
           $item.addClass("review-approved");
         else if (item.action == "declined") 
           $item.addClass("review-declined");
-        $item.css("width", width + "%");
-        var step = $item.find(".step");
+        $item.css("width", "50%");
+        var avatar = $item.find(".contact-avatar");
+        avatar.attr("data-username", item.username);
+        avatar.contactAvatar();
         step.text(item.profile.fullName);
         if (item.needResolve) {
           step.resolveUserNames();

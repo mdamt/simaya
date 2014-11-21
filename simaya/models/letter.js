@@ -13,6 +13,11 @@ module.exports = function(app) {
   var filePreview = require("file-preview");
   var notification = require("./notification.js")(app);
   var nodeStream = require('stream')
+  var async = require("async");
+  var qrImage = require("qr-image");
+  var PdfDocument = require("pdfkit");
+  var spawn = require('child_process').spawn;
+  var printControlDb = require("./print-control")(app);
   
   // stages of sending
   var stages = {
@@ -48,6 +53,11 @@ module.exports = function(app) {
         recipients: "administration-recipient",
         text: "letter-sent-recipient",
         url : "/letter/check/%ID",
+      },
+      directRecipient: {
+        recipients: "direct-recipients-in-organization",
+        text: "letter-received-recipient",
+        url : "/letter/read/%ID",
       }
     },
     "letter-rejected": {
@@ -467,7 +477,7 @@ module.exports = function(app) {
     }
 
     var validateManualIncoming = function(data) {
-      _.each(["receivedDate", "date", "incomingAgenda", "mailId", "recipient", "title", "classification", "priority", "type", "comments"], function(item) {
+      _.each(["receivedDate", "date", "incomingAgenda", "mailId", "recipient", "title", "classification", "priority", "type" ], function(item) {
         if (!data[item]) {
           success = false;
           fields.push(item);
@@ -674,6 +684,9 @@ module.exports = function(app) {
       outputData.date = new Date(data.date);
       outputData.status = data.status || stages.REVIEWING;
 
+      if (data.originator == data.sender) {
+        outputData.status = stages.APPROVED;
+      }
 
       reviewerListByLetter(outputData, data.originator, data.sender, function(reviewerList) {
         outputData.reviewers = _.pluck(reviewerList, "username");
@@ -759,8 +772,15 @@ module.exports = function(app) {
 
     contentIndex(id, who, index, function(err, data) {
       if (err) return cb(err);
-      contentPdf(id, who, data.index, true, null, function(err) {
-        if (err) return cb(err);
+      contentPdf({
+        id: id, 
+        username: who,
+        index: data.index, 
+        ignoreCache: true, 
+        disablePrintControl: true,
+        stream: null
+        }, function(err) {
+        if (err && cb) return cb(err);
         var name = ["pdf", id, who, data.index].join("-") + ".pdf"; 
         stream.contentType("image/png");
         var store = app.store(name, 'r');
@@ -873,6 +893,20 @@ module.exports = function(app) {
   }
 
   var getSelector = function(username, action, options, cb) {
+    var getParents = function(path) {
+      var orgs = [];
+      var splits = path.split(";");
+
+      var prev = "";
+      for (var i = 0; i < splits.length; i ++) {
+        var org = prev + ";" + splits[i];
+        if (!prev) org = splits[i];
+        prev = org;
+        orgs.push(org);
+      }
+      return orgs;
+    }
+
     var findUser = function(cb) {
       user.findOne({username: username}, function(err, result) {
         if (result == null) {
@@ -958,6 +992,12 @@ module.exports = function(app) {
         doneWithCb = true;
         getSenders(org, function(err, items) {
           if (err) return cb(err);
+          var superiorOrgs;
+          if (items.length > 0) {
+              var i = items.pop();
+              superiorOrgs = getParents(i.profile.organization);
+          }
+
           if (isAdministration) {
             selector = {
               $or: [
@@ -976,13 +1016,6 @@ module.exports = function(app) {
             selector["$or"].push(check);
 
           } else {
-            var superiorOrg, superiorOrgMangled;
-            if (items.length > 0) {
-              var i = items.pop();
-              superiorOrg = i.profile.organization;
-              superiorOrgMangled = superiorOrg.replace(/\./g, "___");
-            }
-
             selector = {
               $or: [
                 { originator: username },
@@ -994,15 +1027,17 @@ module.exports = function(app) {
             check["receivingOrganizations." + orgMangled] = { $exists: true };
             check["receivingOrganizations." + orgMangled + ".status"] = stages.RECEIVED; 
             selector["$or"].push(check);
-            if (superiorOrg) {
-              var check = {};
-              check["receivingOrganizations." + superiorOrgMangled] = { $exists: true };
-              check["receivingOrganizations." + superiorOrgMangled + ".status"] = stages.RECEIVED; 
-              selector["$or"].push(check);
-
-            }
-
           }
+          if (superiorOrgs && superiorOrgs.length > 0) {
+              _.each(superiorOrgs, function(superiorOrg) {
+                  var check = {};
+                  var superiorOrgMangled = superiorOrg.replace(/\./g, "___");
+                  check["receivingOrganizations." + superiorOrgMangled] = { $exists: true };
+                  check["receivingOrganizations." + superiorOrgMangled + ".status"] = stages.RECEIVED; 
+                  selector["$or"].push(check);
+              });
+          }
+
           cb(null, selector);
         })
         // open
@@ -1261,7 +1296,7 @@ module.exports = function(app) {
         findHeads(orgs, function(heads) {
           // no heads found
           if (!heads) return callback([]);
-          if (heads[initiatingUser] == initial.organization) {
+          if (heads[initiatingUser] == initial.organization && orgs.length > 1) {
             orgs.shift();
           }
 
@@ -1273,22 +1308,22 @@ module.exports = function(app) {
     });
   }
 
+  var findAdministration = function(office, cb) {
+      var query = {
+          roleList: { $in: [ app.simaya.administrationRole ] }
+      }
+      if (_.isArray(office)) {
+          query["profile.organization"] = { $in: office }
+      } else {
+          query["profile.organization"] = office;
+      }
+      user.findArray(query, cb);
+  };
+
   //
   // data.office
   //
   var sendNotification = function(sender, type, data, cb) {      
-    var findAdministration = function(office, cb) {
-      var query = {
-        roleList: { $in: [ app.simaya.administrationRole ] }
-      }
-      if (_.isArray(office)) {
-        query["profile.organization"] = { $in: office }
-      } else {
-        query["profile.organization"] = office;
-      }
-      user.findArray(query, cb);
-    };
-
     var findMyOrganization = function(cb) {
       user.findArray({username: sender}, function(err, result) {
         if (result && result.length == 1) {
@@ -1317,7 +1352,35 @@ module.exports = function(app) {
       var recipients = [];
       var reviewers = data.record.reviewers;
       var currentReviewer = data.record.currentReviewer;
-      if (entry.recipients == "recipients-in-organization") {
+      if (entry.recipients == "direct-recipients-in-organization") {
+        var funcs = [];
+
+        _.each(data.record.recipients, function(username) {
+          var f = function(fn) {
+            user.findOne({username: username}, function(err, result) {
+              if (err) return fn(err);
+              var organization = result.profile.organization;
+              if (!organization) return fn(null);
+
+              org.findOne({ path: organization}, function(err, result) {
+                if (err) return fn(err);
+                if (result && result.head != username) {
+                  // direct letter to staff
+                  // auto receive
+                  recipients.push(username);
+                } 
+                fn(null);
+              });
+            });
+          }
+          funcs.push(f);
+        });
+        async.series(funcs, function(err, result) {
+          if (err) return cb(err);
+          return cb(recipients);
+        });
+      } 
+      else if (entry.recipients == "recipients-in-organization") {
         findMyOrganization(function(org) {
           findRecipientsInMyOrg(org, function(err, result) {
             return cb(result);
@@ -1364,13 +1427,14 @@ module.exports = function(app) {
           }
         }
       }
+
       return cb(recipients);
     };
 
     var send = function(sender, recipient, text, url) {
       setTimeout(function() {
         if (url) url = url.replace("%ID", data.record._id);
-        if (recipient.username) {
+        if (recipient && recipient.username) {
           recipient = recipient.username;
         }
 
@@ -1439,6 +1503,8 @@ module.exports = function(app) {
     }
 
     var isIncomingAgenda = function(org, recipients) {
+
+          console.log(org);
       return (l.data.receivingOrganizations &&
           l.data.receivingOrganizations[org]);
     }
@@ -1629,9 +1695,9 @@ module.exports = function(app) {
       getDispositions(function() {
         findOrg(function(err, org) {
           if (isRecipient(result[0].recipients)) recipientView(false);
+          else if (isIncomingAgenda(org)) recipientView(true);
           else if (isRecipient(result[0].ccList)) ccView(false);
           else if (isSender(result[0])) senderView();
-          else if (isIncomingAgenda(org)) recipientView(true);
 
           if (l.meta.underReview) outgoingView();
 
@@ -1682,7 +1748,73 @@ module.exports = function(app) {
     }
     var sort = {};
     sort[key] = dir;
+    if (sort["date"]) {
+      // If it is sorted by date, then make the creationDate is also with the same order
+      sort["creationDate"] = sort["date"];
+    }
     return sort;
+  }
+
+  // Prepares query 
+  var populateSearchQuery = function(selector, options, cb) {
+    if (!options || !options.search) return cb(null, selector);
+
+    var searchString = options.search.string;
+    var searchType = options.search.letterType; 
+    var org = options.search.organization;
+
+    var user = app.db('user');
+    user.findArray({"profile.fullName" : { $regex: searchString, $options: "i" }}, function(err, userInfo) {
+      if (err) return cb(err);
+      var users = [];
+      _.each(userInfo, function(u) {
+        users.push(u.username);
+      });
+
+      var searchObj = {
+        $or : [
+        {
+          "title": { $regex : searchString, $options: "i" }
+        }
+        , {
+          "body": { $regex : searchString, $options: "i" }
+        }
+        , {
+          "senderManual.name": { $regex : searchString, $options: "i" }
+        }
+        , {
+          "senderManual.organization": { $regex : searchString, $options: "i" }
+        }
+        , {
+          "mailId": { $regex : searchString, $options: "i" }
+        }
+        , {
+          "outgoingAgenda": { $regex : searchString, $options: "i" }
+        }
+        ]}
+
+
+      if (org) {
+        var t = "receivingOrganizations." + org + ".agenda";
+        var orgSearch = {};
+        orgSearch[t] = searchString;
+        searchObj["$or"].push(orgSearch);
+      }
+      if (users.length > 0) {
+        searchObj["$or"].push({ sender: { $in: users }});
+        searchObj["$or"].push({ recipients: { $in: users }});
+      }
+
+      if (searchType) {
+        searchObj["type"] = searchType;
+      }
+
+      var newSelector = { "$and": [] };
+      newSelector["$and"].push(searchObj);
+      newSelector["$and"].push(selector);
+
+      cb(null, newSelector);
+    });
   }
 
   var findBundle = function(type, selector, options, cb) {
@@ -1690,22 +1822,45 @@ module.exports = function(app) {
     var limit = options.limit || 20;
     var page = options.page || 1;
     var skip = (page - 1) * limit;
-    db.find(selector, options, function(err, cursor) {
+    var exposeAgenda = function(data) {
+      _.each(data, function(item) {
+        var orgName = options.myOrganization;
+        if (!orgName) return;
+        while (true) {
+          var org = item.receivingOrganizations[orgName] || {};
+          item.incomingAgenda = org.agenda;
+          if (item.incomingAgenda) break;
+          var loc = orgName.lastIndexOf(";");
+          if (loc < 0) break;
+          orgName = orgName.substr(0, loc);
+        }
+
+      });
+    }
+
+    populateSearchQuery(selector, options, function(err, selector) {
       if (err) return cb(err);
-      cursor.count(false, function(err, count) {
+      delete(options.search);
+      db.find(selector, options, function(err, cursor) {
         if (err) return cb(err);
-        cursor.
-          sort(sort).
-          skip(skip).
-          limit(limit).
-          toArray(function(err, result) {
+        cursor.count(false, function(err, count) {
           if (err) return cb(err);
-          var obj = {
-            type: type,
-            total: count,
-            data: result
-          }
-          cb(null, obj);
+          cursor.
+            sort(sort).
+            skip(skip).
+            limit(limit).
+            toArray(function(err, result) {
+              if (err) return cb(err);
+              var obj = {
+                type: type,
+                total: count,
+                data: result
+              }
+              if (type == "letter-incoming") {
+                exposeAgenda(result);
+              }
+              cb(null, obj);
+            });
         });
       });
     });
@@ -1766,8 +1921,87 @@ module.exports = function(app) {
     });
   };
 
+  // Prepare print control id and qr code image
+  // Input: options.inputStream: original pdf stream
+  //        options.stream: output stream
+  var printControl = function(options, cb) {
+    var inputFile = options.inputFile;
+    var outputStream = options.stream;
 
-  var contentPdf = function(id, who, index, ignoreCache, stream, cb) {
+    var id = ObjectID();
+    var url = options.protocol + "://" + options.host + "/print-control/" + id;
+
+    var png = qrImage.image(url, {type: "png"});
+    var qrCodeFile = "/tmp/" + id + ".png";
+    var writeStream = fs.createWriteStream(qrCodeFile);
+
+    console.log("PC", url);
+
+    // Input: stampFile, local file of stamp pdf 
+    var combine = function(stampFile, fn) {
+      var args = ["pdftk", inputFile, "stamp", stampFile, "output", "-"];
+      var done = function() {
+        outputStream.end();
+        fn();
+      }
+
+      outputStream.contentType("application/pdf");
+      var preview = spawn("/bin/sh", ["-c", args.join(" ")]);
+      preview.on("error", function() {
+        done();
+      });
+
+      preview.on("close", function() {
+        done();
+      });
+
+      preview.stdout.on("data", function(data) {
+        outputStream.write(data);
+      });
+    }
+
+    var generatePdfStamp = function() {
+      var pdf = new PdfDocument({ size: "a4"});
+      // embed png file
+      pdf.image(qrCodeFile, 8, 794, { width: 40} );
+      // remove generated png file
+      fs.unlinkSync(qrCodeFile);
+
+      // generate pdf stamp
+      var stampFile = "/tmp/" + id + ".pdf";
+      var stamp = fs.createWriteStream(stampFile);
+      pdf.pipe(stamp);
+      pdf.end();
+
+      // combine generated pdf and the input stream
+      combine(stampFile, function() {
+        // clean up
+        fs.unlinkSync(stampFile);
+        options._id = id;
+        printControlDb.insert(options, function() {
+          cb(null);
+        });
+      });
+    }
+
+    writeStream.on("finish", function() {
+      // generate pdf page with qr code embedded
+      generatePdfStamp();
+    });
+
+    // Generate qr code
+    png.pipe(writeStream);
+  }
+
+  var contentPdf = function(options, cb) {
+    var id = options.id;
+    var who = options.username;
+    var index = options.index;
+    var ignoreCache = options.ignoreCache;
+    var stream = options.stream;
+    var host = options.host;
+    var protocol = options.protocol;
+    var disablePrintControl = options.disablePrintControl;
     var name, path;
 
     var getFromDb = function(cb) {
@@ -1786,14 +2020,31 @@ module.exports = function(app) {
           } 
           return;
         }
+
         var gridStream = gridStore.stream(true);
-        gridStream.on("error", function(error) {
-          if (error) return cb(error);
-        });
-        gridStream.on("end", function() {
-          cb(null);
-        });
-        gridStream.pipe(stream);
+        if (disablePrintControl) {
+          gridStream.on("error", function(error) {
+            if (error) return cb(error);
+          });
+          gridStream.on("end", function() {
+            cb(null);
+          });
+          gridStream.pipe(stream);
+        } else {
+          var inputFile = "/tmp/" + name; 
+          var pdfStream = fs.createWriteStream(inputFile);
+          pdfStream.on("finish", function() {
+            options.inputFile = inputFile;
+            options.type = "content";
+            printControl(options, function(err) {
+              fs.unlinkSync(inputFile);
+              printControlDb.insert(options, function() {
+                cb(err);
+              });
+            });
+          });
+          gridStream.pipe(pdfStream);
+        }
       });
     }
 
@@ -1856,6 +2107,112 @@ module.exports = function(app) {
 
         filePreview.info(gridStream, function(data) {
           cb(data);
+        });
+      });
+    });
+  }
+
+
+  var link = function(who, target, ids, cb) {
+    var funcs = [];
+    var links = [];
+    var administrationUser;
+
+    var findOrg = function(username, cb) {
+      user.findOne({username: username}, function(err, result) {
+        if (result == null) {
+          return cb(new Error(), {success: false, reason: "authorized user not found"});
+        }
+        cb(null, result.profile.organization);
+      });
+    }
+
+    findOrg(who, function(err, myOrg) {
+      if (err) return cb(err);
+      openLetter(target, who, {}, function(err, data) {
+        if (err) return cb(err);
+        if (!data || data.length < 0) return cb(new Error("Unable to open target letter"));
+        _.each(ids, function(id) {
+          var f = function(fn) {
+            // Try to open the letter one by one
+            openLetter(id, who, {}, function(err, data) {
+              if (err) console.log(arguments);
+              if (data && data.length > 0 && !err) {
+                _.each(data, function(item) {
+                  item.receivingOrganizations = item.receivingOrganizations || {};
+                  var testUsers = [ item.originator ];
+
+                  var makeLink = function() {
+                    if (target && 
+                        item._id && 
+                        target.toString() != item._id.toString()) {
+                      // Only link the successfully opened letter
+                      links.push({
+                        _id: item._id,
+                        title: item.title
+                      });
+                    }
+                  };
+
+                  if (_.isArray(item.reviewers)) testUsers = testUsers.concat(item.reviewers);
+                  if (item.sender) testUsers.push(item.sender);
+                  if (_.isArray(item.recipients)) testUsers = testUsers.concat(item.recipients);
+
+                  findAdministration(item.senderOrganization, function(err, admins) {
+
+                    if (admins && admins.length > 0) {
+                      _.each(admins, function(admin) {
+                        testUsers.push(admin.username); 
+                      });
+                    }
+                    var found = _.findIndex(testUsers, function(r) {return who==r}) >= 0;
+                    if (!found) {
+                      var orgs = Object.keys(item.receivingOrganizations);
+                      var orgName = myOrg; 
+
+                      while (true) {
+                        _.each(orgs, function(letterOrg) {
+                          if (letterOrg == orgName) {
+                            found = true;
+                            return;
+                          }
+                        });
+                        if (found) break;
+                        var loc = orgName.lastIndexOf(";");
+                        if (loc < 0) break;
+                        orgName = orgName.substr(0, loc);
+                      }
+
+                      if (!found)
+                      return fn(new Error("Unauthorized user"));
+                    }
+                    makeLink();
+                    fn(null);
+                  });
+                });
+              } else {
+                fn(null);
+              }
+            });
+          }
+          funcs.push(f);
+        });
+        async.series(funcs, function(err, result) {
+          if (err) return cb(err);
+          if (links.length > 0) {
+            db.update({_id: ObjectID(target)}, 
+                { 
+                  $set: {
+                    links: links
+                  }
+                }
+                , function(err){
+                  if (err) return cb(err);
+                  cb(null, links);
+                });
+          } else {
+            cb(new Error("No letter can be linked"));
+          }
         });
       });
     });
@@ -1979,12 +2336,16 @@ module.exports = function(app) {
     // Download file attachment
     // Return a callback
     //    result: file stream
-    downloadAttachment: function(fileId, stream, callback) {
+    downloadAttachment: function(options, callback) {
+      var fileId = options.id;
+      var stream = options.stream;
       // Find letter title for this file
-      db.findOne({'fileAttachments.path': ObjectID(fileId)}, {fileAttachments: 1, _id: 0}, function(error, item){
+      db.findOne({'fileAttachments.path': ObjectID(fileId)}, {fileAttachments: 1, _id: 1}, function(error, item){
         if (item != null) {
+          var processed = false;
           item.fileAttachments.forEach(function(e) {
             if (e.path.toString() == fileId.toString()) {
+              processed = true;
               stream.contentType(e.type);
               stream.attachment(e.name);
               var store = app.store(e.path, e.name, "r");
@@ -1997,17 +2358,39 @@ module.exports = function(app) {
                   return;
                 }
                 var gridStream = gridStore.stream(true);
-                gridStream.on("error", function(error) {
-                  if (callback) return callback(error);
-                });
-                gridStream.on("end", function() {
-                  if (callback) callback(null);
-                });
-                gridStream.pipe(stream);
+                if (/\.pdf$/.test(e.name)) {
+                  // Embed qr code on pdf files
+                  var inputFile = ("/tmp/" + e.name).replace(/ /g, "-"); 
+                  var pdfStream = fs.createWriteStream(inputFile);
+                  pdfStream.on("finish", function() {
+                    options.type = "attachment";
+                    options.inputFile = inputFile;
+                    options.extra = {
+                      letterId: item._id
+                    };
+                    console.log(inputFile);
+                    printControl(options, function(err) {
+                      fs.unlinkSync(inputFile);
+                      callback(err);
+                    });
+                  });
+                  gridStream.pipe(pdfStream);
+
+                } else {
+                  gridStream.on("error", function(error) {
+                    if (callback) return callback(error);
+                  });
+                  gridStream.on("end", function() {
+                    if (callback) callback(null);
+                  });
+                  gridStream.pipe(stream);
+                }
               });
-            } else {
             }
           });
+          if (!processed) {
+            if (callback) callback(new Error("missing file"));
+          }
         } else {
           if (callback) callback(new Error("missing file"));
         }
@@ -2327,7 +2710,11 @@ module.exports = function(app) {
           if (err) return cb(err, result);
 
           if (data.operation == "outgoing") {
-            sendNotification(data.originator, "letter-outgoing", { record: result[0]});
+            if (result[0].status == stages.APPROVED) { 
+              sendNotification(data.originator, "letter-review-finally-approved", { record: result[0]});
+            } else {
+              sendNotification(data.originator, "letter-outgoing", { record: result[0]});
+            }
           } else if (data.operation == "manual-incoming") {
             sendNotification(result[0].originator, "letter-received", { record: result[0]});
           }
@@ -2507,6 +2894,38 @@ module.exports = function(app) {
         })
       }
 
+      var autoReceiveDirectLetter = function(item, outputData, cb) {
+        var r = item.receivingOrganizations || {};
+        var funcs = [];
+
+        _.each(item.recipients, function(username) {
+          var f = function(fn) {
+            user.findOne({username: username}, function(err, result) {
+              if (err) return fn(err);
+              var organization = result.profile.organization;
+              if (!organization) return fn(null);
+
+              org.findOne({ path: organization}, function(err, result) {
+                if (err) return fn(err);
+                if (result && result.head != username) {
+                  // direct letter to staff
+                  // auto receive
+                  r[organization].status = 6;
+                  r[organization].direct = true;
+                  fn(null);
+                } else fn(null);
+              });
+            });
+          }
+          funcs.push(f);
+        });
+        async.series(funcs, function(err, result) {
+          if (err) return cb(err);
+          outputData.receivingOrganizations = r;
+          cb(null, outputData); 
+        });
+      }
+
       db.findOne(selector, function(err, item) {
         if (err) return cb(err);
         if (item == null) return cb(Error(), {status: "item not found"});
@@ -2521,7 +2940,10 @@ module.exports = function(app) {
             if (data.ignoreFileAttachments == "true") {
               outputData.fileAttachments = [];
             }
-            edit(org, outputData, cb);
+            autoReceiveDirectLetter(item, outputData, function(err, outputData) {
+              if (err) return(err);
+              edit(org, outputData, cb);
+            });
           } else {
             return cb(new Error(), {success: false, fields: ["mailId", "outgoingAgenda"]});
           }
@@ -2791,7 +3213,7 @@ module.exports = function(app) {
     listOutgoingLetter: function(username, options, cb) {
       getSelector(username, "outgoing", options, function(err, selector) {
         if (err) return cb(err, selector);
-        db.findArray(selector, options, cb);
+        findBundle("letter-outgoing", selector, options, cb);
       });
     },
 
@@ -2908,5 +3330,10 @@ module.exports = function(app) {
 
     renderContentPage: renderContentPage,
     renderContentPageBase64: renderContentPageBase64,
+    
+    // Links a letter with another letters
+    // Input: {String} who the person who makes the link
+    //        {ObjectId} ids[]
+    link: link
   }
 }
