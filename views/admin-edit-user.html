@@ -197,34 +197,7 @@
 <script type="text/javascript" src="/js/job-title.js"></script>
 <script type="text/javascript" src="/js/user-admin.js"></script>
 <script type="text/javascript">
-function isPolitical(){
-  $('#nip-control').slideUp(function(){
-    $('#nip-input').val('Jabatan politik tanpa NIP');               
-  });
-  $('#class').slideUp(function(){
-    $('#class-input').val('0');                
-  });
-}
-function isnotPolitical(){
-  $('#nip-input').val('',function(){
-    $('#nip-control').show();                
-  });
-  $('#class-input').val('',function(){
-    $('#class').show();                
-  });
-}
 $(document).ready(function() {
-  $('#echelon-input').change(function(){
-    $('select option:selected').each(function(){
-      var politicalBoolean = ($(this).attr("data-type") === "political");
-      if(politicalBoolean){
-        isPolitical();
-      } else {
-        isnotPolitical();  
-      }
-    });
-  });
-
   //{{#localAdmin}}
   function populateLocalAdminOrganization(){
     var url = "/organization/jview/?path={{myOrganization}}&includeParent=1&includeChildren=1";
