@@ -190,7 +190,7 @@ module.exports = function (app) {
         res.redirect("/")
       }
     }
-    var isPolitical = (req.body.nip === "Jabatan politik tanpa NIP");
+    var isPolitical = (parseInt(req.body.nip) === 000000000000000000);
     role.list(function(roleList) {
       vals.roleList = roleList;
       if (typeof(req.body) === "object" && Object.keys(req.body).length != 0) {
@@ -422,7 +422,7 @@ module.exports = function (app) {
       requireAdmin: true,
       isAdminMenu: true
     }
-    
+
     var search = search || {};
 
     search = {
@@ -813,7 +813,7 @@ module.exports = function (app) {
           collection: "organization",
           changes: {
             path: req.body.path,
-            head: "removed" 
+            head: "removed"
           },
           session: req.session.remoteData
         }, function(err, audit) {
@@ -835,7 +835,7 @@ module.exports = function (app) {
           collection: "organization",
           changes: {
             path: req.body.path,
-            head: req.body.head 
+            head: req.body.head
           },
           session: req.session.remoteData
         }, function(err, audit) {
@@ -854,7 +854,7 @@ module.exports = function (app) {
       date: date
     };
     var options = { date: date, limit: 10, page: 1 };
-    
+
     if (req.query.page) options.page = req.query.page;
 
     auditTrail.list(options, function(err, result) {
@@ -871,7 +871,7 @@ module.exports = function (app) {
   }
 
   var auditDetail = function(req, res) {
-    var id = req.param.is 
+    var id = req.param.is
     auditTrail.detail({ id: id}, function(err, result) {
       res.send(result || {});
     });

@@ -74,8 +74,38 @@ $(document).ready(function() {
 
       $.post(form.attr("action"), data, function(result) {
         needPost = false;
-        document.location = link.attr("href"); 
+        document.location = link.attr("href");
       });
     }
   });
+
+  $("#echelon-input").change(function(){
+    $("select option:selected").each(function(){
+      var isPolitical = ($(this).attr("data-type") === "political");
+      if (isPolitical) {
+        hideNonPoliticalInput();
+      } else {
+        showNonPoliticalInput();
+      }
+    });
+  });
+
 });
+
+// functions to toggle the appearance of some input.
+function hideNonPoliticalInput(){
+  $("#nip-control").addClass("hidden", function(){
+    $("#nip-input").val("Jabatan politik tanpa NIP");
+  });
+  $("#class").addClass("hidden", function(){
+    $("#class-input").val("000000000000000000");
+  });
+}
+function showNonPoliticalInput(){
+  $("#nip-input").val("",function(){
+    $("#nip-control").removeClass("hidden");
+  });
+  $("#class-input").val('',function(){
+    $("#class").removeClass("hidden");
+  });
+}

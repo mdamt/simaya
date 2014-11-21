@@ -115,7 +115,7 @@
             <label class="control-label" for="profile[echelon]">Jenjang Jabatan</label>
             <div class="controls">
               <select id="echelon-input" name="profile[echelon]" class="span6">
-                <option data-type="nonpolitical" value="0a" {{isEchelon0a}}>Hakim</option>
+                <option value="0a" {{isEchelon0a}}>Hakim</option>
                 <option data-type="political" value="0b" {{isEchelon0b}}>Ketua DPR</option>
                 <option data-type="political" value="0c" {{isEchelon0c}}>Wakil Ketua DPR</option>
                 <option data-type="political" value="0d" {{isEchelon0d}}>Ketua DPRD</option>
@@ -128,16 +128,16 @@
                 <option data-type="political" value="0r" {{isEchelon0r}}>Wakil Bupati</option>
                 <option data-type="political" value="0s" {{isEchelon0s}}>Walikota</option>
                 <option data-type="political" value="0t" {{isEchelon0t}}>Wakil Walikota</option>
-                <option data-type="nonpolitical" value="1a" {{isEchelon1a}}>Eselon I A</option>
-                <option data-type="nonpolitical" value="1b" {{isEchelon1b}}>Eselon I B</option>
-                <option data-type="nonpolitical" value="2a" {{isEchelon2a}}>Eselon II A</option>
-                <option data-type="nonpolitical" value="2b" {{isEchelon2b}}>Eselon II B</option>
-                <option data-type="nonpolitical" value="3a" {{isEchelon3a}}>Eselon III A</option>
-                <option data-type="nonpolitical" value="3b" {{isEchelon3b}}>Eselon III B</option>
-                <option data-type="nonpolitical" value="4a" {{isEchelon4a}}>Eselon IV A</option>
-                <option data-type="nonpolitical" value="4b" {{isEchelon4b}}>Eselon IV B</option>
-                <option data-type="nonpolitical" value="5" {{isEchelon5}}>Eselon V</option>
-                <option data-type="nonpolitical" value="5a" {{isEchelon5a}}>Staf</option>
+                <option value="1a" {{isEchelon1a}}>Eselon I A</option>
+                <option value="1b" {{isEchelon1b}}>Eselon I B</option>
+                <option value="2a" {{isEchelon2a}}>Eselon II A</option>
+                <option value="2b" {{isEchelon2b}}>Eselon II B</option>
+                <option value="3a" {{isEchelon3a}}>Eselon III A</option>
+                <option value="3b" {{isEchelon3b}}>Eselon III B</option>
+                <option value="4a" {{isEchelon4a}}>Eselon IV A</option>
+                <option value="4b" {{isEchelon4b}}>Eselon IV B</option>
+                <option value="5" {{isEchelon5}}>Eselon V</option>
+                <option value="5a" {{isEchelon5a}}>Staf</option>
               </select>
             </div>
           </div>
@@ -317,33 +317,8 @@
                     <script type="text/javascript" src="/js/chosen/chosen.jquery.js"></script>
                     <script type="text/javascript" src="/js/user-admin.js"></script>
                     <script type="text/javascript">
-function isPolitical(){
-  $('#nip-control').slideUp(function(){
-    $('#nip-input').val('Jabatan politik tanpa NIP');               
-  });
-  $('#class').slideUp(function(){
-    $('#class-input').val('0');                
-  });
-}
-function isnotPolitical(){
-  $('#nip-input').val('',function(){
-    $('#nip-control').show();                
-  });
-  $('#class-input').val('',function(){
-    $('#class').show();                
-  });
-}
+
 $(document).ready(function() {
-  $('#echelon-input').change(function(){
-    $('select option:selected').each(function(){
-      var politicalBoolean = ($(this).attr("data-type") === "political");
-      if(politicalBoolean){
-        isPolitical();
-      } else {
-        isnotPolitical();  
-      }
-    });
-  });
   //  {{#localAdmin}}
   function populateLocalAdminOrganization(){
     var url = "/organization/jview/?path={{myOrganization}}&includeParent=1&includeChildren=1";
