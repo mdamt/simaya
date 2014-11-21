@@ -1,4 +1,26 @@
+
+  function updateInputVisibility(e) {
+
+    var isPolitical = ($(e).attr("data-type") === "political");
+    if (isPolitical) {
+      $("#nip-control").addClass("hidden");
+      $("#nip-input").val("00000000000000000000");
+      $("#class").addClass("hidden");
+      $("#class-input").val("0");
+    } else {
+      $("#nip-input").val("");
+      $("#nip-control").removeClass("hidden");
+      $("#class-input").val("");
+      $("#class").removeClass("hidden");
+    }
+  }
+
 $(document).ready(function() {
+  $("#echelon-input").change(function(){
+    $("select[id='echelon-input'] option:selected").each(function(){
+      updateInputVisibility(this);
+    });
+  });
   var needPost = false;
 
   $("input").change(function(){
@@ -79,33 +101,15 @@ $(document).ready(function() {
     }
   });
 
-  $("#echelon-input").change(function(){
-    $("select option:selected").each(function(){
-      var isPolitical = ($(this).attr("data-type") === "political");
-      if (isPolitical) {
-        hideNonPoliticalInput();
-      } else {
-        showNonPoliticalInput();
-      }
-    });
-  });
 
 });
 
 // functions to toggle the appearance of some input.
-function hideNonPoliticalInput(){
+function hideNonPoliticalInputInEditUser(){
   $("#nip-control").addClass("hidden", function(){
-    $("#nip-input").val("Jabatan politik tanpa NIP");
+    $("#nip-input").val("000000000000000000000");
   });
   $("#class").addClass("hidden", function(){
-    $("#class-input").val("000000000000000000");
-  });
-}
-function showNonPoliticalInput(){
-  $("#nip-input").val("",function(){
-    $("#nip-control").removeClass("hidden");
-  });
-  $("#class-input").val('',function(){
-    $("#class").removeClass("hidden");
+    $("#class-input").val("0");
   });
 }
