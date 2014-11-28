@@ -6,12 +6,12 @@
       <h2>Surat Keluar</h2>
     </div>
     <div class="pull-right">
-      <form class="form-search pull-right" action="/outgoing" method="get">
-        <div class="search-date hidden">
+      <form class="form-search" action="/outgoing" method="get">
+        <div class="search-date hidden inline">
           <input type="text" name="startDate" width="10px" size="10px">
-          <span class="add-on"><i data-max-date="today" class="hidden icon-calendar calendar-picker" data-field="startDate"></i></span>
+          <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="startDate"></i></span>
           <input type="text" name="endDate">
-          <span class="add-on"><i data-max-date="today" class="hidden icon-calendar calendar-picker" data-field="endDate"></i></span>
+          <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="endDate"></i></span>
       </div>
         <input id="search-string" type="text" class="search-query" name="search[string]" value="{{searchString}}">
         <select id="search-type" name="search[letterType]">
