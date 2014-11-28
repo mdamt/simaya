@@ -41,12 +41,12 @@ LetterComposer.prototype.prepareData = function() {
   elements.each(function(index, item) {
     var $item = $(item);
     if ($item.attr("type") == "checkbox") {
-      self.formData[$item.attr("name")] = ($item.prop("checked"));    
+      self.formData[$item.attr("name")] = ($item.prop("checked"));
     } else {
       if ($item.attr("name") && $item.attr("data-value")) {
-        self.formData[$item.attr("name")] = $item.attr("data-value");    
+        self.formData[$item.attr("name")] = $item.attr("data-value");
       } else {
-        self.formData[$item.attr("name")] = $item.val();    
+        self.formData[$item.attr("name")] = $item.val();
       }
     }
   });
@@ -167,7 +167,7 @@ LetterComposer.prototype.validateManualIncoming = function(step) {
 LetterComposer.prototype.validateReceiveIncoming = function(step) {
   var self = this;
 
-  var fields = ["incomingAgenda"] 
+  var fields = ["incomingAgenda"]
   var errorFields = [];
 
   var ok = true;
@@ -190,7 +190,7 @@ LetterComposer.prototype.validateReceiveIncoming = function(step) {
 LetterComposer.prototype.validateSendOutgoing = function(step) {
   var self = this;
 
-  var fields = ["mailId", "outgoingAgenda"] 
+  var fields = ["mailId", "outgoingAgenda"]
   var errorFields = [];
 
   var ok = true;
@@ -252,7 +252,7 @@ LetterComposer.prototype.validateReviewOutgoing = function(step) {
   }
 
   if (step == 2 && (recipientManual == false && recipientDb == false)) {
-    
+
     errorFields.push("recipient");
     ok = false;
   }
@@ -315,7 +315,7 @@ LetterComposer.prototype.validateOutgoing = function(step) {
   }
 
   if (step == 2 && (recipientManual == false && recipientDb == false)) {
-    
+
     errorFields.push("recipient");
     ok = false;
   }
@@ -358,7 +358,7 @@ LetterComposer.prototype.validate = function(quiet) {
     "review-outgoing": "validateReviewOutgoing",
     "send-outgoing": "validateSendOutgoing",
     "receive-incoming": "validateReceiveIncoming",
-    "-": "noop" 
+    "-": "noop"
   }
 
   var n = self.formData.operation || "-";
@@ -387,7 +387,7 @@ LetterComposer.prototype.submitManualOutgoing = function() {
        self.formData["recipientManual"] = {
          id: self.formData["recipientManual[id]"],
          name: self.formData["recipientManual[name]"],
-         address: self.formData["recipientManual[address]"], 
+         address: self.formData["recipientManual[address]"],
          organization: self.formData["recipientManual[organization]"],
        }
        delete(self.formData["recipientManual[id]"]);
@@ -413,7 +413,7 @@ LetterComposer.prototype.submitManualIncoming = function() {
     self.formData["senderManual"] = {
       id: self.formData["senderManual[id]"],
       name: self.formData["senderManual[name]"],
-      address: self.formData["senderManual[address]"], 
+      address: self.formData["senderManual[address]"],
       organization: self.formData["senderManual[organization]"],
     }
     delete(self.formData["senderManual[id]"]);
@@ -478,7 +478,7 @@ var saveDocument = function(ng, cb) {
       type: "POST",
       contentType: false,
       processData: false,
-      data: data 
+      data: data
     }).error(function(result) {
       $(".form-error").removeClass("hidden");
       $(".form-content-error").removeClass("hidden");
@@ -507,11 +507,25 @@ LetterComposer.prototype.submitForm = function() {
       data: self.formData
     }).always(function() {
     }).error(function(result) {
-      $(".form-error").removeClass("hidden");
       var obj = result.responseJSON;
       if (obj && obj.fields) {
         self.highlightErrors(obj.fields);
       }
+      console.log(obj.message);
+      if (typeof(obj.message) != "undefined" && obj.message.length > 0) {
+        $(".form-error").text("Mohon maaf, surat tidak  dapat disimpan. ");
+        setTimeout(function(){
+          obj.message.forEach(function(r){
+            if (obj.message == "duplicate-mail-id") {
+              $(".form-error").append("<br>Nomor surat sudah pernah digunakan. ");
+            }
+            if (obj.message == "duplicate-agenda") {
+              $(".form-error").append("<br>Nomor agenda sudah pernah digunakan. ");
+            }
+          })
+        },500);
+      }
+      $(".form-error").removeClass("hidden");
     }).done(function(result, status) {
       $(".form-success").removeClass("hidden");
       $("#fuelux-wizard").addClass("hidden");
@@ -554,7 +568,7 @@ LetterComposer.prototype.submit = function() {
     "review-outgoing": "submitReviewOutgoing",
     "send-outgoing": "submitSendOutgoing",
     "receive-incoming": "submitReceiveIncoming",
-    "-": "noop" 
+    "-": "noop"
   }
 
   var n = self.formData.operation || "-";
