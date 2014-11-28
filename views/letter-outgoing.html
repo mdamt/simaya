@@ -7,13 +7,13 @@
     </div>
     <div class="pull-right">
       <form class="form-search" action="/outgoing" method="get">
+        <input id="search-string" type="text" class="search-query" name="search[string]" value="{{searchString}}">
         <div class="search-date hidden inline">
           <input type="text" name="startDate" width="10px" size="10px">
           <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="startDate"></i></span>
           <input type="text" name="endDate">
           <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="endDate"></i></span>
       </div>
-        <input id="search-string" type="text" class="search-query" name="search[string]" value="{{searchString}}">
         <select id="search-type" name="search[letterType]">
           <option value="" >Semua Jenis</option>
           <option value="99" data-type="date" >Tanggal</option>
