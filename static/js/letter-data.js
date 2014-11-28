@@ -74,6 +74,7 @@ function updateSearchInputVisibility(e) {
   if (isDateQuery) {
     $(".search-date").removeClass("hidden");
     $("#search-string").addClass("hidden");
+
   } else {
     $(".search-date").addClass("hidden");
     $("#search-string").removeClass("hidden");
