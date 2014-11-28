@@ -653,7 +653,7 @@ Letter = module.exports = function(app) {
 
   // Populates reviewer"s resolved data with reviewing log
   var populateReviewerLog = function(nextReviewer, log, data) {
-    if (!log) 
+    if (!log)
       return data;
 
     for (var i = 0; i < log.length; i ++) {
@@ -1066,7 +1066,7 @@ Letter = module.exports = function(app) {
     letter.readLetter(id, me, function(err, data) {
       if (!err) {
         vals.letter = data.data;
-        vals.meta = data.meta; 
+        vals.meta = data.meta;
       }
       utils.render(req, res, "letter-view", vals, "base-authenticated");
     });
@@ -1409,7 +1409,7 @@ Letter = module.exports = function(app) {
     if (utils.currentUserHasRoles([app.simaya.administrationRole], req, res)) {
       search.search = {
           senderOrganization: req.session.currentUserProfile.organization,
-          status: letter.Stages.SENT, // displays SENT only for staff 
+          status: letter.Stages.SENT, // displays SENT only for staff
       }
 
     } else {
@@ -1439,6 +1439,8 @@ Letter = module.exports = function(app) {
     var options = {};
     if (req.query && req.query.search) {
       options.search = req.query.search;
+      console.log(req);
+      console.log(JSON.stringify(options.search));
     }
 
     var functions = {
@@ -1479,6 +1481,10 @@ Letter = module.exports = function(app) {
         dir: parseInt(sortOptions["dir"]) || 0
       }
       letter[f](me, options, function(err, result) {
+        console.log(JSON.stringify(me));
+        console.log(JSON.stringify(options));
+        console.log(JSON.stringify(result));
+        console.log(JSON.stringify(vals));
         console.log(err);
         if (result) {
           vals.letters = result.data;
@@ -2348,10 +2354,10 @@ Letter = module.exports = function(app) {
       letter.contentPdf({
         protocol: req.protocol,
         host: req.host,
-        id: id, 
-        username: me, 
-        index: index, 
-        ignoreCache: ignoreCache, 
+        id: id,
+        username: me,
+        index: index,
+        ignoreCache: ignoreCache,
         stream: res
       }, function(err) {
         if(err) {
@@ -2527,7 +2533,7 @@ Letter = module.exports = function(app) {
     }
     var linkedLetters = [];
     if (data["linked-letters"]) {
-      linkedLetters = data["linked-letters"].split(","); 
+      linkedLetters = data["linked-letters"].split(",");
     }
     letter.editLetter({_id: ObjectID(data._id)}, data, function(err, result) {
       var done = function(err, result) {
@@ -2622,12 +2628,12 @@ Letter = module.exports = function(app) {
     letter.openLetter(id, me, {}, function(err, data) {
       if (data && data.length == 1) {
         if (
-          (data[0].currentReviewer == me && 
+          (data[0].currentReviewer == me &&
           data[0].status == letter.Stages.REVIEWING) ||
-          (isAdministration && 
+          (isAdministration &&
           data[0].status == letter.Stages.APPROVED)) {
           return res.redirect("/letter/review/" + id);
-        } else if (isAdministration && 
+        } else if (isAdministration &&
           data[0].status == letter.Stages.SENT &&
           data[0].receivingOrganizations[org]) {
           return res.redirect("/letter/review-incoming/" + id);

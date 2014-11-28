@@ -1857,44 +1857,57 @@ module.exports = function(app) {
       _.each(userInfo, function(u) {
         users.push(u.username);
       });
+      if (searchType === "99") {
+        console.log("pencarian berdasarkan tanggal");
+        var startDate = new Date("2014-10-01T00:00:00.000Z");
+        var endDate = new Date("2014-10-30T00:00:00.000Z");
+        var searchObj = {};
+        searchObj["date"] = {
+          $gte: startDate,
+          $lt: endDate
+        }
+      } else {
+        console.log("pencarian berdasarkan jenis surat");
+        var searchObj = {
+          $or : [
+          {
+            "title": { $regex : searchString, $options: "i" }
+          }
+          , {
+            "body": { $regex : searchString, $options: "i" }
+          }
+          , {
+            "senderManual.name": { $regex : searchString, $options: "i" }
+          }
+          , {
+            "senderManual.organization": { $regex : searchString, $options: "i" }
+          }
+          , {
+            "mailId": { $regex : searchString, $options: "i" }
+          }
+          , {
+            "outgoingAgenda": { $regex : searchString, $options: "i" }
+          }
+          ]}
 
-      var searchObj = {
-        $or : [
-        {
-          "title": { $regex : searchString, $options: "i" }
-        }
-        , {
-          "body": { $regex : searchString, $options: "i" }
-        }
-        , {
-          "senderManual.name": { $regex : searchString, $options: "i" }
-        }
-        , {
-          "senderManual.organization": { $regex : searchString, $options: "i" }
-        }
-        , {
-          "mailId": { $regex : searchString, $options: "i" }
-        }
-        , {
-          "outgoingAgenda": { $regex : searchString, $options: "i" }
-        }
-        ]}
 
+        if (org) {
+          var t = "receivingOrganizations." + org + ".agenda";
+          var orgSearch = {};
+          orgSearch[t] = searchString;
+          searchObj["$or"].push(orgSearch);
+        }
+        if (users.length > 0) {
+          searchObj["$or"].push({ sender: { $in: users }});
+          searchObj["$or"].push({ recipients: { $in: users }});
+        }
 
-      if (org) {
-        var t = "receivingOrganizations." + org + ".agenda";
-        var orgSearch = {};
-        orgSearch[t] = searchString;
-        searchObj["$or"].push(orgSearch);
+        if (searchType) {
+          searchObj["type"] = searchType;
+        }
+
       }
-      if (users.length > 0) {
-        searchObj["$or"].push({ sender: { $in: users }});
-        searchObj["$or"].push({ recipients: { $in: users }});
-      }
 
-      if (searchType) {
-        searchObj["type"] = searchType;
-      }
 
       var newSelector = { "$and": [] };
       newSelector["$and"].push(searchObj);

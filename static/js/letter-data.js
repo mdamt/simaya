@@ -69,7 +69,22 @@ jQuery.fn.resolveLetterData = function() {
     }
   }
 }
+function updateSearchInputVisibility(e) {
+  var isDateQuery = ($(e).attr("data-type") === "date");
+  if (isDateQuery) {
+    $(".search-date").removeClass("hidden");
+    $("#search-string").addClass("hidden");
+  } else {
+    $(".search-date").addClass("hidden");
+    $("#search-string").removeClass("hidden");
+  }
+}
 
 $(document).ready(function() {
   $(".resolve-letter-data").resolveLetterData();
+  $("#search-type").change(function(){
+    $("select[id='search-type'] option:selected").each(function(){
+      updateSearchInputVisibility(this);
+    });
+  });
 });
