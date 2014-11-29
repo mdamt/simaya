@@ -1439,8 +1439,6 @@ Letter = module.exports = function(app) {
     var options = {};
     if (req.query && req.query.search) {
       options.search = req.query.search;
-      console.log(req);
-      console.log(JSON.stringify(options.search));
     }
 
     var functions = {

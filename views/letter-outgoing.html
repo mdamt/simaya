@@ -7,16 +7,17 @@
     </div>
     <div class="pull-right">
       <form class="form-search" action="/outgoing" method="get">
-        <input id="search-string" type="text" class="search-query" name="search[string]" value="{{searchString}}">
-        <div class="search-date inline hidden" style="display:none !important; visibility:hidden !important">
-          <input type="text" name="startDate">
-          <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="startDate"></i></span>
-          <input type="text" name="endDate">
-          <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="endDate"></i></span>
+        <div class="search-date inline hidden">
+          <input type="text" name="search[startDate]">
+          <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="search[startDate]"></i></span>i
+          <span class="label label-grey">sampai dengan</span>
+          <input type="text" name="search[endDate]">
+          <span class="add-on"><i data-max-date="today" class="icon-calendar calendar-picker" data-field="search[endDate]"></i></span>
         </div>
+        <input id="search-string" type="text" class="search-query" name="search[string]" value="{{searchString}}">
         <select id="search-type" name="search[letterType]">
           <option value="" >Semua Jenis</option>
-          <option value="99" data-type="date" >Tanggal</option>
+          <option value="searchByDate" data-type="date" >Tanggal</option>
           <option value="0" {{searchLetterType0}}>Peraturan</option>
           <option value="1" {{searchLetterType1}}>Pedoman</option>
           <option value="2" {{searchLetterType2}}>Petunjuk Pelaksanaan</option>

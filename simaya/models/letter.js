@@ -1591,7 +1591,7 @@ module.exports = function(app) {
 
     var isIncomingAgenda = function(org, recipients) {
 
-          console.log(org);
+      console.log(org);
       return (l.data.receivingOrganizations &&
           l.data.receivingOrganizations[org]);
     }
@@ -1857,17 +1857,15 @@ module.exports = function(app) {
       _.each(userInfo, function(u) {
         users.push(u.username);
       });
-      if (searchType === "99") {
-        console.log("pencarian berdasarkan tanggal");
-        var startDate = new Date("2014-10-01T00:00:00.000Z");
-        var endDate = new Date("2014-10-30T00:00:00.000Z");
+      if (searchType === "searchByDate") {
+        var startDate = new Date(options.search.startDate+" 00:00:00");
+        var endDate = new Date(options.search.endDate+" 23:59:59");
         var searchObj = {};
         searchObj["date"] = {
           $gte: startDate,
           $lt: endDate
         }
       } else {
-        console.log("pencarian berdasarkan jenis surat");
         var searchObj = {
           $or : [
           {
