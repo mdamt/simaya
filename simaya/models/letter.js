@@ -1850,6 +1850,8 @@ module.exports = function(app) {
     var searchType = options.search.letterType;
     var org = options.search.organization;
 
+    console.log(JSON.stringify(options.search));
+
     var user = app.db('user');
     user.findArray({"profile.fullName" : { $regex: searchString, $options: "i" }}, function(err, userInfo) {
       if (err) return cb(err);
@@ -1857,7 +1859,7 @@ module.exports = function(app) {
       _.each(userInfo, function(u) {
         users.push(u.username);
       });
-      if (searchType === "searchByDate") {
+      if (searchType === "search-by-date") {
         var startDate = new Date(options.search.startDate+" 00:00:00");
         var endDate = new Date(options.search.endDate+" 23:59:59");
         var searchObj = {};
@@ -1890,7 +1892,7 @@ module.exports = function(app) {
 
 
         if (org) {
-          var t = "receivingOrganizations." + org + ".agenda";
+          var t = "receivingOrganizations." + org.replace(/\./g,"___") + ".agenda";
           var orgSearch = {};
           orgSearch[t] = searchString;
           searchObj["$or"].push(orgSearch);

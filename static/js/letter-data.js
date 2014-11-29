@@ -70,8 +70,8 @@ jQuery.fn.resolveLetterData = function() {
   }
 }
 function updateSearchDateVisibility(e) {
-  var searchTypeByDate = ($(e).attr("data-type") === "date");
-  if (searchTypeByDate) {
+  var searchByDate = ($(e).attr("data-type") === "date");
+  if (searchByDate) {
     $(".search-date").removeClass("hidden");
     $("#search-string").addClass("hidden");
 
