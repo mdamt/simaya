@@ -2,10 +2,6 @@
 <link rel="stylesheet" href="/upload/css/jquery.fileupload.css">
 <link rel="stylesheet" href="/upload/css/jquery.fileupload-ui.css">
 <p align="right">
-	<a href="#" class="btn btn-success" id="btn-print">Cetak</a>
-  {{#isRecipient}}
-	<a href="#" class="btn btn-primary" id="btn-share-trigger">Bagikan</a>
-  {{/isRecipient}}
 	{{#allowDisposition}}
 	{{#allowNewDisposition}}
 	<a href="/disposition/new?letterId={{letterId}}&reference={{_id}}" class="btn btn-primary">Buat disposisi</a>
@@ -35,6 +31,13 @@
     </div>
   </div>
 
+	<p align="right">
+		<a href="#" class="btn btn-small btn-success" id="btn-print">Cetak</a>
+	  {{#isRecipient}}
+		<a href="#" class="btn btn-small btn-info" id="btn-share-trigger">Bagikan</a>
+	  {{/isRecipient}}
+	</p>
+	
   <script>
     $("#decline-disposition").click(function(e) {
       e.preventDefault();
