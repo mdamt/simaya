@@ -106,7 +106,7 @@ LinkLetter.prototype.initModal = function() {
   var acceptButtonLabel = self.$e.attr("data-accept-label") || "missing data-accept-label attribute";
   var dataLoadingLabel = self.$e.attr("data-loading-label") || "missing data-loading-label attribute";
 
-  var modal = $("<div>").addClass("link-letter-modal modal fade").attr("id", "modal-" + self.name);
+  var modal = $("<div>").addClass("link-letter-modal modal fade hidden").attr("id", "modal-" + self.name);
   var header = $("<div>").
       addClass("modal-header").
       append($("<a>").attr("data-dismiss","modal").addClass("close").text("×")).
@@ -162,6 +162,7 @@ LinkLetter.prototype.initButton = function() {
 
   selectButton.click(function() {
     self.modal.modal("show");
+    self.modal.removeClass("hidden");
     var width = window.innerWidth * 0.8;
     var left = (window.innerWidth - width) / 2;
     self.modal.css("width", width);
