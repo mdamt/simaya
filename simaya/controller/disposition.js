@@ -420,12 +420,10 @@ Disposition = module.exports = function(app) {
   
   var populateSearch = function(search) {
     if (search.letterType === "search-by-date") {
-      var endOfMonth = function(month, year) {
-        return new Date(year,month,00).getDate();
-      }
-      var startDateSplitted=search.startDate.split("-");
-      var startDate = new Date(startDateSplitted[0],(startDateSplitted[1]-1), startDateSplitted[2], 00, 00, 01);
-      var endDate = new Date(endDateSplitted[0],(endDateSplitted[1]-1), endOfMonth((endDateSplitted[1]-1),endDateSplitted[0]), 23, 59, 59);
+      var start = options.search.startDate.split("-");
+      var end = options.search.endDate.split("-");
+      var startDate = new Date(start[0], (start[1]-1), parseInt(start[2]), 00, 00, 01);
+      var endDate = new Date(end[0], (end[1]-1), parseInt(end[2]), 23, 59, 59);
       var searchObj = [];
       searchObj = [
         {
