@@ -205,6 +205,7 @@ Disposition = module.exports = function(app) {
                       vals.reference['securities' + vals.reference.security] = true; 
                       if (result[0].recipients[i].date) {
                         vals.reference.formattedDate = moment(result[0].recipients[i].date).format('dddd, DD MMMM YYYY');
+                        vals.reference.formattedCreatedDate = moment(result[0].recipients[i].created_at).format('dddd, DD MMMM YYYY');
                       }
                     }
                   }
@@ -281,10 +282,12 @@ Disposition = module.exports = function(app) {
           vals.dispositions = result[0];
         
           vals.recipientList = [];
+          vals.dispositions.formattedCreatedDate = moment(result[0].created_at).format('dddd, DD MMMM YYYY');
           vals.dispositions.formattedDate = moment(result[0].date).format('dddd, DD MMMM YYYY');
 
           // Handle old data
           if (vals.dispositions.formattedDate.indexOf("undefined") == 0) {
+            vals.dispositions.formattedCreatedDate = result[0].created_at
             vals.dispositions.formattedDate = result[0].date
           }
 
@@ -419,7 +422,6 @@ Disposition = module.exports = function(app) {
   }
   
   var populateSearch = function(search) {
-    console.log(JSON.stringify(search));
     if (search.letterType === "search-by-date") {
       var start = search.startDate.split("-");
       var end = search.endDate.split("-");
