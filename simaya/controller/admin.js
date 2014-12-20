@@ -1252,19 +1252,6 @@ module.exports = function (app) {
             vals.unsuccessful = true;
             vals.form = true;
             utils.render(req, res, 'admin-user-category-form', vals, 'base-admin-authenticated');
-            /* vals.roleName = req.body.roleName; */
-            /* vals.newRoleName = req.body.newRoleName; */
-            /* if (typeof(v.errors['roleName']) !== "undefined") { */
-            /*   var e = v.errors['roleName']; */
-  
-            /*   for (var i = 0; i < e.length; i ++) { */
-            /*     if (e[i] == 'There is already a role with this name') { */
-            /*       vals.duplicateRole = true; */
-            /*     } else if (e[i] == 'Invalid role name') { */
-            /*       vals.invalidRole = true; */
-            /*     } */
-            /*   } */
-            /* } */
           } else {
             req.successful = true;
           }
