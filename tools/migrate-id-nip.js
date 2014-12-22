@@ -13,22 +13,18 @@ var db = app.db("user")
 var spinner = ["/", "-", "|", "\\"];
 
 var saved = 0;
-var cat;
 var initiateUserCategory = function(cb){
   var category = app.db("userCategory");
-  category.drop(function(){
-    category.getCollection(function (error, collection) {
-      var data = {
-        categoryName:"PNS",
-        categoryDesc:"Pegawai Negeri Sipil",
-        categoryId:"NIP",
-        idLength:"18"
-      }
-      data._id = collection.pkFactory.createPk();
-      cat = data._id;
-      category.insert(data, function(){
-        cb();
-      });
+  category.getCollection(function (error, collection) {
+    var data = {
+      categoryName:"PNS",
+      categoryDesc:"Pegawai Negeri Sipil",
+      categoryId:"NIP",
+      idLength:"18"
+    }
+    data._id = collection.pkFactory.createPk();
+    category.insert(data, function(){
+      cb(data._id);
     });
   });
 }
@@ -41,10 +37,10 @@ var mod = function(index, data) {
   db.findOne({_id: data[index]._id}, function(e, item) {
     process.stdout.write(spinner[(index % 4)] + " -> " + index + "/" + data.length + "\r");
     var save = false;
-    if (item.profile.nip) {
-      item.profile.id = item.profile.nip;
-      item.profile.category = cat;
-      delete item.profile.nip;
+    if (item.profile.id) {
+      item.profile.nip = item.profile.id;
+      delete item.profile.id;
+      delete item.profile.category;
       save = true;
     } 
     if (save) {
@@ -57,13 +53,13 @@ var mod = function(index, data) {
     }
   });
 }
+var category = app.db("userCategory");
 
 console.log("Standing by...");
 settings.db.open(function(){
-  initiateUserCategory(function(){
+    category.drop(function(){});
     db.findArray({}, {_id:1,date:1}, function(e, c) {
       mod(0, c);
     })
-  });
 
 });
