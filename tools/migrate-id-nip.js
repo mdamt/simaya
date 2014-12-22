@@ -1,4 +1,4 @@
-// This script migrates profile.nip to profile.id
+// This script migrates profile.id to profile.nip and drop the userCategory collection
 
 var settings = require('../settings.js')
 
