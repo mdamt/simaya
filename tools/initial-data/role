@@ -9,3 +9,5 @@
 { "roleName" : "plh", "roleDescription" : "Buat Assign Plh", "_id" : { "$oid" : "50f6247cd421af3e0100001d" }, "created_at" : { "$date" : 1358308476998 } }
 { "roleName" : "agenda", "roleDescription" : "Modul Agenda", "_id" : { "$oid" : "50fca592f4403ad60e000008" }, "created_at" : { "$date" : 1358734738257 } }
 { "roleName" : "sender", "roleDescription" : "Satuan Kerja", "_id" : { "$oid" : "5225885de954a0660e000010" }, "created_at" : { "$date" : 1378191453333 } }
+{ "categoryName" : "PNS", "categoryDesc" : "Pegawai Negeri Sipil", "categoryId" : "NIP", "idLength" : "18", "_id" : ObjectId("54986ce0f943bf04145d6869"), "created_at" : ISODate("2014-12-22T19:11:28.536Z") }
+
