@@ -155,6 +155,9 @@
           <li><a id="admin-role" href="/admin/role">Kewenangan</a></li>
           <li><a id="admin-audit" href="/admin/audit">Rekam Jejak</a></li>
           {{/localAdmin}}
+          {{^localAdmin}}
+          <li><a id="user-category" href="/admin/user-category">Kategori Pengguna</a></li>
+          {{/localAdmin}}
 
 
         </ul>

@@ -11,7 +11,8 @@ module.exports = function (app) {
     , _ = require("lodash")
     , Node = require('../models/node.js')(app)
     , Hawk = require('hawk')
-    , gearmanode = require("gearmanode");
+    , gearmanode = require("gearmanode")
+    , category = require('../models/userCategory.js')(app);
 
   Array.prototype.unique = function () {
     var o = {}, i, l = this.length, r = []
@@ -1163,6 +1164,131 @@ module.exports = function (app) {
     }); 
 
   }
+  var userCategory = function(req, res){
+    category.list(function(categoryList) {
+      var vals = [];
+      vals.categoryList = categoryList;
+      if (req.successful) {
+        vals.successful = true;
+      }
+      if (req.removed) {
+        vals.removed = req.removed;
+      }
+      return utils.render(req, res, 'admin-user-category', vals, 'base-admin-authenticated');
+    });
+  }
+  var newUserCategory = function (req, res) {
+    var vals = {};
+    if (req.path) {
+      if (req.path.indexOf('/admin') > -1) {
+        if (typeof(req.body) === "object" && Object.keys(req.body).length != 0) {
+          vals.categoryName = req.body.categoryName;
+          vals.categoryDescription = req.body.categoryDescription;
+          vals.categoryId = req.body.categoryId;
+          vals.idLength = req.body.idLength;
+          category.insert(vals, function(err){
+            if (Object.keys(err.errors).length > 0) {
+              if (err.errors.categoryName) {
+                vals.duplicateCategory = req.body.categoryName;
+                vals.categoryName = "";
+              }
+              if (err.errors.idLength) {
+                vals.invalidIdLength = true;
+                vals.idLength = "";
+              }
+              vals.unsuccessful = true;
+              vals.form = true;
+              utils.render(req, res, 'admin-user-category-form', vals, 'base-admin-authenticated');
+            } else {
+              req.successful = true;
+              userCategory(req,res);
+            }
+          });      
+        
+        } else {
+          vals.form = true;
+          utils.render(req, res, 'admin-user-category-form', vals, 'base-admin-authenticated');
+        }
+      } else {
+        res.redirect("/")
+      }
+    }
+  }
+  var editUserCategory = function(req, res) {
+    var vals = {
+      title: 'Ubah Kategori Pengguna',
+      editMode: true,
+      requireAdmin: true,
+      categoryName: req.body.categoryName,
+      categoryDescription: req.body.categoryDescription,
+      categoryId: req.body.categoryId,
+      idLength: req.body.idLength,
+    }
+    var data = {
+      categoryName : req.body.categoryName,
+      categoryDescription : req.body.categoryDescription,
+      categoryId : req.body.categoryId,
+      idLength : req.body.idLength,
+    }
+ 
+    if (Object.keys(req.body).length != 0) {
+      if (req.body.remove) {
+        category.remove(req.body.oldCategoryName, function(){
+          req.removed = req.body.oldCategoryName;
+          userCategory(req, res);
+        }); 
+      } else {
+          console.log("update");
+        category.edit(req.body.oldCategoryName, data, function(err) {
+          if (Object.keys(err.errors).length > 0) {
+            if (err.errors.categoryName) {
+              vals.duplicateCategory = req.body.categoryName;
+              vals.categoryName = "";
+            }
+            if (err.errors.idLength) {
+              vals.invalidIdLength = true;
+              vals.idLength = "";
+            }
+            vals.unsuccessful = true;
+            vals.form = true;
+            utils.render(req, res, 'admin-user-category-form', vals, 'base-admin-authenticated');
+          } else {
+            req.successful = true;
+          }
+          auditTrail.record({
+            collection: "userCategory",
+            changes: {
+              renameUserCategory: {
+                from: req.body.oldCategoryName,
+                to: req.body.categoryName
+              }
+            },
+            session: req.session.remoteData,
+            result: vals.successful
+          }, function(err, audit) {
+            userCategory(req,res);
+          });
+  
+        });
+        }
+    } else {
+      category.list({categoryName: req.params.id }, function(r) {
+        vals.categoryName = req.params.id;
+        if (r.length == 1) {
+          vals.form = true;
+          vals.categoryName = r[0].categoryName; 
+          vals.categoryDescription = r[0].categoryDescription; 
+          vals.categoryId = r[0].categoryId; 
+          vals.idLength = r[0].idLength; 
+        } else {
+          vals.categoryNotFound = true;
+          vals.unsuccessful = true;
+        }
+        utils.render(req, res, 'admin-user-category-form', vals, 'base-admin-authenticated');
+      });
+    }
+  }
+  
 
 
   return {
@@ -1197,6 +1323,9 @@ module.exports = function (app) {
 
     checkLocalNode: checkLocalNode,
     checkSync: checkSync,
-    syncLocalNode: syncLocalNode
+    syncLocalNode: syncLocalNode,
+    userCategory: userCategory,
+    newUserCategory: newUserCategory,
+    editUserCategory: editUserCategory,
   }
 };

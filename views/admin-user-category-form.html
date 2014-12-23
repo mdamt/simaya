@@ -1,0 +1,82 @@
+      <div class="page-head">
+        <h2 class="pull-left">
+          {{^title}}
+            Tambah Kategori Pengguna
+          {{/title}}
+          {{#title}}
+            {{title}}
+          {{/title}}
+        </h2>
+        <div class="clearfix"></div>
+      </div>
+      <div class="matter">
+        <div class="container-fluid">
+          {{#unsuccessful}}
+          <div class="alert alert-error">
+          <b>Maaf</b><br/>
+          {{#duplicateCategory}}
+          Kategori pengguna "{{duplicateCategory}}" sudah ada.
+          {{/duplicateCategory}}
+          {{#invalidIdLength}}
+          Jumlah digit nomor identitas masih salah.
+          {{/invalidIdLength}}
+          </div>
+          {{/unsuccessful}}
+
+          {{#form}}
+          {{^editMode}}
+            <form class="well form-horizontal" action=/admin/new-user-category method=post>
+          {{/editMode}}
+          {{#editMode}}
+            <form class="well form-horizontal" action=/admin/edit-user-category method=post>
+          {{/editMode}}
+          	
+            <fieldset>
+            <div class="control-group">
+                <label class="control-label" for="categoryName">Kategori Pengguna</label>
+                <div class="controls">
+                {{^editMode}}
+                  <input class="span3" type=text name="categoryName" placeholder="Nama kategori" value="{{categoryName}}" />
+                {{/editMode}}
+                {{#editMode}}
+                  <input class="span3" type=text value="{{categoryName}}" disabled/>
+                  <input type=hidden name="categoryName" value="{{categoryName}}"/>
+                {{/editMode}}
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="categoryDescription">Deskripsi</label>
+                <div class="controls">
+                   <textarea class="span4" name="categoryDescription" placeholder="Deskripsi kategori" cols=35 rows=3>{{categoryDescription}}</textarea>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="categoryId">Jenis Nomor Identitas</label>
+                <div class="controls">
+                   <input class="span3" type=text name="categoryId" placeholder="NIP, NRP atau lainnya"  value="{{categoryId}}" />
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="categoryId">Jumlah Digit Nomor Identitas</label>
+                <div class="controls">
+                   <input class="span3" type=text name="idLength" placeholder="Angka, maksimal 10 digit" value="{{idLength}}" />
+                </div>
+            </div>
+            <input type=submit name=saveAndClose class="btn btn-primary" value="Simpan"/>
+            {{#editMode}}
+            <input type=hidden id="remove" name=remove />
+            <input type=hidden name=oldCategoryName value="{{categoryName}}"/>
+            <input type=submit name=removeAndClose class="btn btn-danger" onclick="setRemove()" value="Hapus"/>
+            <script>
+              var setRemove = function(){
+                      $("#remove").val("true");
+              }
+            </script>
+            {{/editMode}}
+            </fieldset>
+            
+          </form>
+          {{/form}}
+
+        </div>
+      </div> <!-- Matter -->
