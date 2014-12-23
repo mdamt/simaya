@@ -1,4 +1,4 @@
-// This script migrates profile.nip to profile.id and initiates a doc in userCategory
+// This script migrates profile.nip to profile.id
 
 var settings = require('../settings.js')
 
