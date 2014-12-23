@@ -212,8 +212,9 @@ module.exports = function (app) {
               if (isLocalAdmin && req.body.profile.id.length != cat[0].idLength) {
                 vals.unsuccessful = true;
                 vals.form = true;
-                vals.messages = vals.messages || []
-                vals.messages.push({message: cat[0].categoryId+' "' + req.body.profile.id + '" tidak sesuai. '+cat[0].categoryId+' harus '+cat[0].idLength+' angka.'})
+                vals.error = {
+                  invalidId : true
+                }
                 category.list(function(categoryList) {
                   vals.userCategory = categoryList;
                   return utils.render(req, res, 'admin-new-user', vals, 'base-admin-authenticated');
@@ -222,8 +223,9 @@ module.exports = function (app) {
               } else if (isLocalAdmin && req.body.profile.category && !req.body.profile.id.length) {
                 vals.unsuccessful = true;
                 vals.form = true;
-                vals.messages = vals.messages || []
-                vals.messages.push({message: 'Nomor identitas harus diisi.'})
+                vals.error = {
+                  emptyId : true
+                }
                 category.list(function(categoryList) {
                   vals.userCategory = categoryList;
                   return utils.render(req, res, 'admin-new-user', vals, 'base-admin-authenticated');
@@ -235,8 +237,9 @@ module.exports = function (app) {
                       vals.unsuccessful = true;
                       vals.existNip = true;
                       vals.form = true;
-                      vals.messages = vals.messages || []
-                      vals.messages.push({message: ' Nomor identitas "' + req.body.profile.id + '" sudah ada'})
+                      vals.error = {
+                        idExists : true
+                      }
                       category.list(function(categoryList) {
                         vals.userCategory = categoryList;
                         return utils.render(req, res, 'admin-new-user', vals, 'base-admin-authenticated');
