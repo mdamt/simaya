@@ -33,17 +33,4 @@ $(document).ready(function() {
       }
     });
   });
-
-
-  /* $('select[name="profile[echelon]"]').change(function() { */
-  /*   var value = parseInt($(this).attr('value')); */
-  /*   if (value == 0) { */
-  /*     $('#nip-control').hide(); */
-  /*     $('#class').hide(); */
-  /*   } else { */
-  /*     $('#nip-control').show(); */
-  /*     $('#class').show(); */
-  /*   } */
-  /* }); */
-  /* $('select[name="profile[echelon]"]').change(); */
 });
