@@ -1,15 +1,15 @@
 function updateInputVisibility(e) {
   var isPolitical = ($(e).attr("data-type") === "political");
   if (isPolitical) {
-    $("#nip-input").val("000000000000000000");
-    $("#nip-control").addClass("hidden");
-    $("#class-input").val("0");
-    $("#class").addClass("hidden");
+    /* $("#nip-input").val("000000000000000000"); */
+    /* $("#nip-control").addClass("hidden"); */
+    /* $("#class-input").val("0"); */
+    /* $("#class").addClass("hidden"); */
   } else {
     $("#nip-input").val("");
-    $("#nip-control").removeClass("hidden");
-    $("#class-input").val("");
-    $("#class").removeClass("hidden");
+    /* $("#nip-control").removeClass("hidden"); */
+    /* $("#class-input").val(""); */
+    /* $("#class").removeClass("hidden"); */
   }
 }
 $(document).ready(function() {
