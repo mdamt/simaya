@@ -41,6 +41,22 @@ module.exports = function (app) {
 
     if (req.body.roles) {
       data.roleList = req.body.roles.split(",");
+      // localAdmin not allowed to create user with "Administrator" role
+      if (req.isLocalAdmin) {
+        var i = 0;
+        var checkRole = function(x, i, c){
+          if (x == "admin") {
+            // cut administrator role!
+            data.roleList.splice(i,1);
+          }
+          c();
+        }
+        data.roleList.forEach(function(x){
+          checkRole(x, i, function(){
+            i++;
+          })
+        });
+      }
     }
 
     if (req.body.active) {
@@ -193,6 +209,7 @@ module.exports = function (app) {
     if (req.path) {
       if (req.path.indexOf('/localadmin') > -1) {
         isLocalAdmin = true;
+        req.isLocalAdmin = true;
       } else if (req.path.indexOf('/admin') > -1) {
         isLocalAdmin = false
       } else {
