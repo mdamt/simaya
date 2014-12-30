@@ -8,6 +8,8 @@ var setupNewEvents = function() {
     $("[name=recurrence]").val("0");
     $("[name=visibility]").val("0");
     $("[name=description]").val("");
+    var now = new Date();
+    $("#user-timezone").val(now);
   })
   $("#edit-event-button-ok").click(function() {
     $("#add-event-dialog").modal("show");
