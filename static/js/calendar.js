@@ -93,20 +93,7 @@ var setupNewEvents = function() {
  }
   $("#add-event-button-ok").click(function(e) {
     e.preventDefault();
-<<<<<<< HEAD
-
-    $('#form').upload("/calendar/new", function(result) {
-      needPost = false;
-      console.log(result)
-      result = JSON.parse(result);
-      if (result.status == "OK") {
-        document.location = pathName; 
-      } else {
-        $(".error-message").addClass("hidden");
-        $(".alert").removeClass("hidden");
-        $("#error-" + result.error).removeClass("hidden");
-      }
-=======
+    
     convertToUTC(function(){
       $('#form').upload("/calendar/new", function(result) {
         needPost = false;
@@ -120,7 +107,6 @@ var setupNewEvents = function() {
           $("#error-" + result.error).removeClass("hidden");
         }
       });
->>>>>>> 7642b68... pass user timezone to backend
     });
     
   })
