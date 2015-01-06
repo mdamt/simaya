@@ -1161,8 +1161,8 @@ module.exports = function (app) {
           return res.send(err.output.payload.statusCode, err);
         }
       } 
-
-      Node.processRequest({ credentials : credentials, artifacts : artifacts, payload : req.body}, function(err){
+      parsedPayload = JSON.parse(req.body);
+      Node.processRequest({ credentials : credentials, artifacts : artifacts, payload : parsedPayload}, function(err){
         if (err) {
           console.log(err);
           res.send(401, err);
