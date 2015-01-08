@@ -1593,7 +1593,7 @@ Node.prototype.localSyncNode = function(options, fn) {
   var findNode = function(cb) {
     self.LocalNodes.findOne({ installationId : installationId}, function(err, node){
       if (err) return cb(err);
-      if (!node) return cb(new Error("Node is not found");
+      if (!node) return cb(new Error("Node is not found"));
       cb(null, node);
     });
   }
