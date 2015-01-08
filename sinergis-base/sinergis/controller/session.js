@@ -107,18 +107,25 @@ module.exports = function(app) {
         if (r == true) {
           user.isActive(username, function(isActive) {
             if (isActive == true) {
-              if (typeof(req.body.captcha) !== "undefined") {
-                captcha.validate(req.body.captcha.id, req.body.captcha.text, function(captchaResult) {
-                  if (captchaResult == true) {
-                    doLogin(req, res, vals);
+              user.isSynced(username, function(isSynced) {
+                if (isSynced == false) {
+                  if (typeof(req.body.captcha) !== "undefined") {
+                    captcha.validate(req.body.captcha.id, req.body.captcha.text, function(captchaResult) {
+                      if (captchaResult == true) {
+                        doLogin(req, res, vals);
+                      } else {
+                        vals.captchaUnsuccessful = true;
+                        doLoginWithCaptcha(req, res, vals);
+                      }
+                    });
                   } else {
-                    vals.captchaUnsuccessful = true;
-                    doLoginWithCaptcha(req, res, vals);
+                    doLogin(req, res, vals);
                   }
-                });
-              } else {
-                doLogin(req, res, vals);
-              }
+                } else {
+                  vals.unsuccessful = true;
+                  renderLogin(req, res, vals);
+                }
+              });
             } else {
               vals.unsuccessful = true;
               vals.inactive = true;

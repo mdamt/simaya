@@ -277,6 +277,18 @@ module.exports = function(app) {
         callback(false);
       });
     },
+    
+    // Check if synced
+    isSynced: function(username, callback) {
+      db.findOne({username: username}, function(err, item) {
+        var isSynced = (err == null && item != null && item.synced == true);
+        if (isSynced) {
+          callback(true);
+          return;
+        }
+        callback(false);
+      });
+    },
 
     // Set status of a specified user to be active
     // Returns a callback:
