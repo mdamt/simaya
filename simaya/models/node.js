@@ -955,13 +955,13 @@ Node.prototype.restore = function(options, fn) {
     });
   }
 
-  if (isMaster) {
+  /* if (isMaster) { */
     tmpCollection = options.collection + syncId; 
     targetCollection = options.collection;
-  } else {
-    tmpCollection = options.collection;
-    targetCollection = tmpCollection;
-  }
+  /* } else { */
+  /*   tmpCollection = options.collection; */
+  /*   targetCollection = tmpCollection; */
+  /* } */
 
   args.push("-h");
   args.push(serverConfig.host);
@@ -986,8 +986,8 @@ Node.prototype.restore = function(options, fn) {
       cursor.nextObject(function(err, item) {
         if (err) return fn(err);
         if (!item) return mcb(null);
-
         var id = item._id;
+        item.synced = true;
         delete(item._id);
         destination.update({ _id: id }, { $set: item }, {upsert:1}, function(err) {
           processedRecords ++;
@@ -1058,15 +1058,15 @@ Node.prototype.restore = function(options, fn) {
       console.log("Error while importing");
       fn(new Error());
     } else {
-      if (isMaster == false) {
-        // in local node, trust everything comes from the server
-        console.log(">imported");
-        fn(null, data);
-      } else {
+      /* if (isMaster == false) { */
+      /*   // in local node, trust everything comes from the server */
+      /*   console.log(">imported"); */
+      /*   fn(null, data); */
+      /* } else { */
         // in master node, check everything comes from the slave
         console.log(">checking data");
         checkData();
-      }
+      /* } */
     }
   });
   try {
