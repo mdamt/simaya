@@ -879,7 +879,12 @@ Node.prototype.requestSync = function(options, fn) {
 
 Node.prototype.dump = function(options, fn) {
   var self = this;
-  var query = JSON.stringify(options.query).replace(/"ISODate\(([0-9-]+)\)DateISO"/g, "new Date($1)");
+  if (options.collection == "user" || options.collection == "jobTitle" || options.collection == "organization" ) {
+    var query = JSON.stringify(options.query).replace(/"ISODate\(([0-9-]+)\)DateISO"/g, "new Date($1)");
+    console.log("======================="+query);
+  } else {
+    var query = JSON.stringify(options.query).replace(/"ISODate\(([0-9-]+)\)DateISO"/g, "new Date($1)");
+  }
   var serverConfig = self.app.dbClient.serverConfig;
   var args = [];
   args.push("-h");
@@ -1298,6 +1303,10 @@ Node.prototype.prepareSync_user = function(options, fn) {
     options.query["profile.organization"] = {
       $regex: "^" + options.organization 
     }
+  } else {
+    options.query["profile.organization"] = {
+      $regex: "^(?!" + options.organization+")" 
+    }
   }
   var opts = _.clone(options);
   opts.fields = "username,password,profile,active,emailList,roleList,lastLogin,modifiedDate,updated_at,_id";
@@ -1315,6 +1324,10 @@ Node.prototype.prepareSync_jobTitle = function(options, fn) {
     options.query.organization = {
       $regex: "^" + options.organization 
     }
+  } else {
+    options.query["profile.organization"] = {
+      $regex: "^(?!" + options.organization+")" 
+    }
   }
   this.dump(options, function(data) {
     console.log("Done dumping jobTitle");
@@ -1326,9 +1339,18 @@ Node.prototype.prepareSync_organization = function(options, fn) {
   var startDate = options.startDate;
   var endDate = options.endDate;
   options.collection = "organization";
-  options.query = {
-    modifiedDate: { $gte: ISODate(startDate), $lt: ISODate(endDate) }
-  };
+  options.query = {};
+  if (options.isMaster == false) {
+    options.query.organization = {
+      modifiedDate: { $gte: ISODate(startDate), $lt: ISODate(endDate) },
+      $regex: "^" + options.organization 
+    }
+  } else {
+    options.query["profile.organization"] = {
+      modifiedDate: { $gte: ISODate(startDate), $lt: ISODate(endDate) },
+      $regex: "^(?!" + options.organization+")" 
+    }
+  }
 
   this.dump(options, function(data) {
     console.log("Done dumping organization");
