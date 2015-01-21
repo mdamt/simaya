@@ -1300,7 +1300,7 @@ Node.prototype.prepareSync_user = function(options, fn) {
     }
   } else {
     options.query = {
-      "profile.organization" : { $regex: "^(?!" + options.organization + ")" },
+      "profile.organization" : { $ne: options.organization },
     }
   }
   var opts = _.clone(options);
@@ -1321,7 +1321,7 @@ Node.prototype.prepareSync_jobTitle = function(options, fn) {
     }
   } else {
     options.query = {
-      organization : { $regex: "^(?!" + options.organization + ")" },
+      organization : { $ne: options.organization },
     }
   }
   this.dump(options, function(data) {
@@ -1340,8 +1340,8 @@ Node.prototype.prepareSync_organization = function(options, fn) {
     }
   } else {
     options.query = {
-      path : { $regex: "^(?!" + options.organization + ")" },
-      origin : { $regex: "^(?!" + options.installationId + ")" },
+      path : { $ne: options.organization },
+      origin : { $ne: options.installationId },
     }
   }
   options.query = {
