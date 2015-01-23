@@ -214,7 +214,7 @@ module.exports = function (app) {
         vals.username = req.body.username;
         vals.profile = req.body.profile;
 
-        if (parseInt(req.body.profile.echelon) != 0) {
+        if (req.body.profile.echelon) {
           if (req.body.profile.category && req.body.profile.id) {
             // validate idLength
             category.list({categoryName:req.body.profile.category},function(cat) {
@@ -262,17 +262,25 @@ module.exports = function (app) {
               }
             });
           } else {
-                vals.unsuccessful = true;
-                vals.form = true;
-                vals.emptyCategory = true;
-                category.list(function(categoryList) {
-                  vals.userCategory = categoryList;
-                  return utils.render(req, res, 'admin-new-user', vals, 'base-admin-authenticated');
-                });
+            vals.unsuccessful = true;
+            vals.form = true;
+            vals.emptyCategory = true;
+            category.list(function(categoryList) {
+              vals.userCategory = categoryList;
+              return utils.render(req, res, 'admin-new-user', vals, 'base-admin-authenticated');
+            });
           }
+        } else {
+          vals.unsuccessful = true;
+          vals.form = true;
+          category.list(function(categoryList) {
+            vals.userCategory = categoryList;
+            return utils.render(req, res, 'admin-new-user', vals, 'base-admin-authenticated');
+          });
         }
 
       } else {
+        console.log("4");
         vals.form = true;
         org.list(undefined, function (r) {
           vals.orgs = r;
