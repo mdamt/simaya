@@ -280,7 +280,6 @@ module.exports = function (app) {
         }
 
       } else {
-        console.log("4");
         vals.form = true;
         org.list(undefined, function (r) {
           vals.orgs = r;
