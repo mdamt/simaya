@@ -78,7 +78,7 @@ var oauth2 = require('./simaya/controller/oauth2/oauth2')(app);
   
 var corsHandler = function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-token-next, X-token-key, Content-type");
+  res.header("Access-Control-Allow-Headers", "X-token-next, X-token-key, Content-type, Authorization");
   res.header("Access-Control-Allow-Credentials", true);
   next();
 }
