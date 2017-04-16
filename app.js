@@ -91,7 +91,7 @@ app.configure(function(){
   app.use(express.static(__dirname + '/static'));
   app.use(express.favicon());
   app.use(express.logger('dev'));
-  app.use(express.bodyParser({keepExtensions: true, uploadDir: __dirname + "/uploads" }))
+  app.use(express.bodyParser({strict: false, keepExtensions: true, uploadDir: __dirname + "/uploads" }))
   app.use(express.methodOverride());
   app.use(corsHandler);
   app.use(express.limit('1gb'));
